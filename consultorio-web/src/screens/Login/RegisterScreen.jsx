@@ -30,33 +30,33 @@ export default function RegisterScreen() {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // 🔹 Modal SMS e sucesso
   const [mostrarModal, setMostrarModal] = useState(false);
   const [codigoSMS, setCodigoSMS] = useState("");
   const [verificationId, setVerificationId] = useState(null);
   const [contador, setContador] = useState(0);
   const [mostrarSucesso, setMostrarSucesso] = useState(false);
+  const [sexoBiologico, setSexoBiologico] = useState("");
+
 
   const navigate = useNavigate();
   const anoAtual = new Date().getFullYear();
   const minDate = "1930-01-01";
   const maxDate = `${anoAtual}-12-31`;
 
-  // ⏳ contador de reenvio
+  // contador de reenvio
   useEffect(() => {
     if (contador <= 0) return;
     const t = setInterval(() => setContador((c) => c - 1), 1000);
     return () => clearInterval(t);
   }, [contador]);
 
-  // 🔸 Inicializa reCAPTCHA invisível
+  // Inicializa reCAPTCHA invisível
   async function initRecaptcha() {
     try {
       if (window.recaptchaVerifier) {
         try {
           window.recaptchaVerifier.clear();
-        } catch {}
+        } catch { }
         window.recaptchaVerifier = null;
       }
 
@@ -76,95 +76,93 @@ export default function RegisterScreen() {
     }
   }
 
+
+  // Envia SMS e exibe modal
   // =========================================
-  // 🔹 Envia SMS e exibe modal
-  // =========================================
-  // =========================================
-// 🔹 Envia SMS e exibe modal
-// =========================================
-async function handleRegister(e) {
-  e.preventDefault();
-  setErro("");
+  async function handleRegister(e) {
+    e.preventDefault();
+    setErro("");
 
-  if (!nome.trim()) return setErro("Por favor, informe seu nome completo.");
-  if (!cpf.trim()) return setErro("Por favor, informe seu CPF.");
-  if (!dataNascimento) return setErro("Informe sua data de nascimento.");
-  if (email !== confirmarEmail) return setErro("Os e-mails não coincidem.");
-  if (senha !== confirmarSenha) return setErro("As senhas não coincidem.");
-  if (!telefone.trim()) return setErro("Informe um telefone válido.");
+    if (!nome.trim()) return setErro("Por favor, informe seu nome completo.");
+    if (!cpf.trim()) return setErro("Por favor, informe seu CPF.");
+    if (!dataNascimento) return setErro("Informe sua data de nascimento.");
+    if (!sexoBiologico.trim()) return setErro("Por favor, selecione seu sexo biológico.");
+    if (email !== confirmarEmail) return setErro("Os e-mails não coincidem.");
+    if (senha !== confirmarSenha) return setErro("As senhas não coincidem.");
+    if (!telefone.trim()) return setErro("Informe um telefone válido.");
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // 🟢 PASSO 1: 
-try {
-  const validarDuplicatas = httpsCallable(functions, "usuarios-validarDuplicatas");
+      // PASSO 1: 
+      try {
+        const validarDuplicatas = httpsCallable(functions, "usuarios-validarDuplicatas");
 
-  let dataFormatada = null;
-  if (dataNascimento && dataNascimento.includes("/")) {
-    const [dia, mes, ano] = dataNascimento.split("/");
-    dataFormatada = `${ano}-${mes}-${dia}`;
-  } else {
-    dataFormatada = dataNascimento || null;
-  }
-
-  
-  await validarDuplicatas({
-    email,
-    telefone,
-    cpf,
-    dataNascimento: dataFormatada,
-  });
-} catch (validErr) {
-  console.error("⚠️ Duplicidade detectada:", validErr);
-  const msg = validErr?.message || "";
-
-  // ✅ Tratamentos separados por tipo
-  if (msg.includes("E-mail já cadastrado")) {
-    setErro("⚠️ Este e-mail já está em uso por outra conta.");
-  } else if (msg.includes("Telefone já cadastrado")) {
-    setErro("⚠️ Este telefone já está em uso por outra conta.");
-  } else if (msg.includes("CPF já cadastrado")) {
-    setErro("⚠️ Este CPF já está em uso por outra conta.");
-  } else {
-    setErro("Erro ao validar informações. Tente novamente.");
-  }
-
-  return;
-}
+        let dataFormatada = null;
+        if (dataNascimento && dataNascimento.includes("/")) {
+          const [dia, mes, ano] = dataNascimento.split("/");
+          dataFormatada = `${ano}-${mes}-${dia}`;
+        } else {
+          dataFormatada = dataNascimento || null;
+        }
 
 
-    // PASSO 2: Encerra sessão anterior (se houver)
-    if (auth.currentUser) {
-      console.log("👋 Encerrando sessão anterior...");
-      await signOut(auth);
+        await validarDuplicatas({
+          email,
+          telefone,
+          cpf,
+          dataNascimento: dataFormatada,
+        });
+      } catch (validErr) {
+        console.error("⚠️ Duplicidade detectada:", validErr);
+        const msg = validErr?.message || "";
+
+        // Tratamentos separados por tipo
+        if (msg.includes("E-mail já cadastrado")) {
+          setErro("⚠️ Este e-mail já está em uso por outra conta.");
+        } else if (msg.includes("Telefone já cadastrado")) {
+          setErro("⚠️ Este telefone já está em uso por outra conta.");
+        } else if (msg.includes("CPF já cadastrado")) {
+          setErro("⚠️ Este CPF já está em uso por outra conta.");
+        } else {
+          setErro("Erro ao validar informações. Tente novamente.");
+        }
+
+        return;
+      }
+
+
+      // PASSO 2: Encerra sessão anterior (se houver)
+      if (auth.currentUser) {
+        console.log("👋 Encerrando sessão anterior...");
+        await signOut(auth);
+      }
+
+      // PASSO 3: Envia SMS
+      const recaptcha = await initRecaptcha();
+      const phoneAuthProvider = new PhoneAuthProvider(auth);
+      const phoneNumber = "+55" + telefone.replace(/\D/g, "");
+      const id = await phoneAuthProvider.verifyPhoneNumber(phoneNumber, recaptcha);
+
+      setVerificationId(id);
+      setMostrarModal(true);
+      setContador(30);
+    } catch (err) {
+      console.error("❌ Erro ao enviar SMS:", err);
+      setErro("Falha ao enviar código SMS. Verifique o número informado.");
+    } finally {
+      setLoading(false);
     }
-
-    // PASSO 3: Envia SMS
-    const recaptcha = await initRecaptcha();
-    const phoneAuthProvider = new PhoneAuthProvider(auth);
-    const phoneNumber = "+55" + telefone.replace(/\D/g, "");
-    const id = await phoneAuthProvider.verifyPhoneNumber(phoneNumber, recaptcha);
-
-    setVerificationId(id);
-    setMostrarModal(true);
-    setContador(30);
-  } catch (err) {
-    console.error("❌ Erro ao enviar SMS:", err);
-    setErro("Falha ao enviar código SMS. Verifique o número informado.");
-  } finally {
-    setLoading(false);
   }
-}
 
 
-  // 🔧 helper: fecha modal e mostra erro visual no card
+  // helper: fecha modal e mostra erro visual no card
   function showVisualError(message) {
-    setMostrarModal(false);         // ✅ erro nunca fica “atrás” do modal
-    setErro(message);               // ✅ mostra no card (div vermelha)
+    setMostrarModal(false);         
+    setErro(message);               
   }
 
-  // 🔧 helper: apaga somente a conta recém‐criada (sem derrubar outras sessões)
+  // helper: apaga somente a conta recém‐criada (sem derrubar outras sessões)
   async function cleanupNewUser(newUser) {
     if (!newUser?.user) return;
     try {
@@ -173,123 +171,122 @@ try {
       // fallback
       try {
         await signOut(auth);
-      } catch {}
+      } catch { }
       console.warn("⚠️ Falha ao deletar user recém-criado; fez signOut.", delErr);
     }
   }
 
-  // =========================================
-  // 🔹 Confirmar código SMS e criar conta 
-  // =========================================
-  // =========================================
-// 🔹 Confirmar código SMS e criar conta 
-// =========================================
-async function handleConfirmarCodigo() {
-  if (!codigoSMS.trim()) return setErro("Digite o código recebido por SMS.");
 
-  setErro("");
-  setLoading(true);
-  let newUser = null;
+  // =========================================
+  // Confirmar código SMS e criar conta 
+  // =========================================
+  async function handleConfirmarCodigo() {
+    if (!codigoSMS.trim()) return setErro("Digite o código recebido por SMS.");
 
-  try {
-    const phoneCred = PhoneAuthProvider.credential(verificationId, codigoSMS);
+    setErro("");
+    setLoading(true);
+    let newUser = null;
 
-    // 1️⃣ Cria a conta no Firebase Auth (email/senha)
     try {
-      newUser = await createUserWithEmailAndPassword(auth, email, senha);
-    } catch (emailErr) {
-      if (emailErr?.code === "auth/email-already-in-use") {
+      const phoneCred = PhoneAuthProvider.credential(verificationId, codigoSMS);
+
+      // Cria a conta no Firebase Auth (email/senha)
+      try {
+        newUser = await createUserWithEmailAndPassword(auth, email, senha);
+      } catch (emailErr) {
+        if (emailErr?.code === "auth/email-already-in-use") {
+          setMostrarModal(false);
+          setErro("⚠️ Este e-mail já está em uso.");
+          return;
+        }
+        console.error("Erro ao criar usuário por e-mail:", emailErr);
         setMostrarModal(false);
-        setErro("⚠️ Este e-mail já está em uso.");
+        setErro("Não foi possível criar a conta por e-mail. Tente novamente.");
         return;
       }
-      console.error("Erro ao criar usuário por e-mail:", emailErr);
+
+      // Vincula telefone ao Auth
+      try {
+        await linkWithCredential(newUser.user, phoneCred);
+      } catch (linkErr) {
+        console.error("Erro ao vincular telefone:", linkErr);
+
+        if (linkErr?.code === "auth/provider-already-linked") {
+          console.warn("Telefone já vinculado. Prosseguindo.");
+        } else if (linkErr?.code === "auth/credential-already-in-use") {
+          try { await newUser.user.delete(); } catch { await signOut(auth); }
+          setMostrarModal(false);
+          setErro("⚠️ Este telefone já está vinculado a outra conta.");
+          return;
+        } else if (linkErr?.code === "auth/invalid-verification-code") {
+          try { await newUser.user.delete(); } catch { await signOut(auth); }
+          setMostrarModal(false);
+          setErro("Código SMS inválido. Tente novamente.");
+          return;
+        } else {
+          try { await newUser.user.delete(); } catch { await signOut(auth); }
+          setMostrarModal(false);
+          setErro("Falha ao vincular o telefone. Tente novamente.");
+          return;
+        }
+      }
+
+      // Cria o documento no Firestore via Cloud Function autenticada
+      try {
+        const criarUsuario = httpsCallable(functions, "usuarios-criarUsuario");
+
+        // Garante formato YYYY-MM-DD
+        let dataFormatada = null;
+        if (dataNascimento && dataNascimento.includes("/")) {
+          const [dia, mes, ano] = dataNascimento.split("/");
+          dataFormatada = `${ano}-${mes}-${dia}`;
+        } else {
+          dataFormatada = dataNascimento || null;
+        }
+
+        await criarUsuario({
+          nome,
+          telefone,
+          cpf,
+          dataNascimento: dataFormatada,
+          sexoBiologico,
+        });
+
+        console.log("✅ Documento criado no Firestore com sucesso!");
+      } catch (firestoreErr) {
+        console.error("Erro ao criar documento no Firestore:", firestoreErr);
+        try { await newUser.user.delete(); } catch { await signOut(auth); }
+        setMostrarModal(false);
+        setErro("Erro ao salvar seus dados. Tente novamente.");
+        return;
+      }
+
+      // Atualiza nome de exibição no Auth
+      try {
+        await updateProfile(newUser.user, { displayName: nome });
+      } catch (pErr) {
+        console.warn("Não foi possível atualizar o displayName:", pErr);
+      }
+
+      // Finaliza com sucesso!
       setMostrarModal(false);
-      setErro("Não foi possível criar a conta por e-mail. Tente novamente.");
-      return;
-    }
-
-    // 2️⃣ Vincula telefone ao Auth
-    try {
-      await linkWithCredential(newUser.user, phoneCred);
-    } catch (linkErr) {
-      console.error("Erro ao vincular telefone:", linkErr);
-
-      if (linkErr?.code === "auth/provider-already-linked") {
-        console.warn("Telefone já vinculado. Prosseguindo.");
-      } else if (linkErr?.code === "auth/credential-already-in-use") {
+      setMostrarSucesso(true);
+    } catch (err) {
+      console.error("❌ Erro geral na verificação:", err);
+      if (newUser?.user) {
         try { await newUser.user.delete(); } catch { await signOut(auth); }
-        setMostrarModal(false);
-        setErro("⚠️ Este telefone já está vinculado a outra conta.");
-        return;
-      } else if (linkErr?.code === "auth/invalid-verification-code") {
-        try { await newUser.user.delete(); } catch { await signOut(auth); }
-        setMostrarModal(false);
-        setErro("Código SMS inválido. Tente novamente.");
-        return;
-      } else {
-        try { await newUser.user.delete(); } catch { await signOut(auth); }
-        setMostrarModal(false);
-        setErro("Falha ao vincular o telefone. Tente novamente.");
-        return;
       }
-    }
-
-    // 3️⃣ Cria o documento no Firestore via Cloud Function autenticada
-    try {
-      const criarUsuario = httpsCallable(functions, "usuarios-criarUsuario");
-
-      // Garante formato YYYY-MM-DD
-      let dataFormatada = null;
-      if (dataNascimento && dataNascimento.includes("/")) {
-        const [dia, mes, ano] = dataNascimento.split("/");
-        dataFormatada = `${ano}-${mes}-${dia}`;
-      } else {
-        dataFormatada = dataNascimento || null;
-      }
-
-      await criarUsuario({
-        nome,
-        telefone,
-        cpf,
-        dataNascimento: dataFormatada,
-      });
-
-      console.log("✅ Documento criado no Firestore com sucesso!");
-    } catch (firestoreErr) {
-      console.error("Erro ao criar documento no Firestore:", firestoreErr);
-      try { await newUser.user.delete(); } catch { await signOut(auth); }
       setMostrarModal(false);
-      setErro("Erro ao salvar seus dados. Tente novamente.");
-      return;
+      setErro("Erro ao confirmar código. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    // 4️⃣ Atualiza nome de exibição no Auth
-    try {
-      await updateProfile(newUser.user, { displayName: nome });
-    } catch (pErr) {
-      console.warn("Não foi possível atualizar o displayName:", pErr);
-    }
-
-    // 5️⃣ Finaliza com sucesso!
-    setMostrarModal(false);
-    setMostrarSucesso(true);
-  } catch (err) {
-    console.error("❌ Erro geral na verificação:", err);
-    if (newUser?.user) {
-      try { await newUser.user.delete(); } catch { await signOut(auth); }
-    }
-    setMostrarModal(false);
-    setErro("Erro ao confirmar código. Tente novamente.");
-  } finally {
-    setLoading(false);
   }
-}
 
 
 
   // =========================================
-  // 🔹 Reenviar SMS
+  // Reenviar SMS
   // =========================================
   async function reenviarSMS() {
     if (contador > 0) return;
@@ -307,7 +304,7 @@ async function handleConfirmarCodigo() {
   }
 
   // =========================================
-  // 🔹 Interface JSX
+  // Interface JSX
   // =========================================
   return (
     <>
@@ -369,7 +366,7 @@ async function handleConfirmarCodigo() {
             />
           </div>
 
-          {/* Data de Nascimento sem o botão nativo de calendário (BUGA NO IOS)*/}
+          {/* Data de Nascimento sem o botão nativo de calendário (BUGA NO iOS)*/}
           <div>
             <label className="block text-sm text-slate-700 mb-1">
               Data de Nascimento
@@ -383,6 +380,43 @@ async function handleConfirmarCodigo() {
               className="w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
             />
           </div>
+
+{/* Sexo Biológico */}
+<div className="relative">
+  <label className="block text-sm text-slate-700 mb-1">
+    Sexo Biológico
+  </label>
+
+  <select
+    value={sexoBiologico}
+    onChange={(e) => setSexoBiologico(e.target.value)}
+    required
+    className="appearance-none w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent pr-8"
+  >
+    <option value="">Selecione</option>
+    <option value="Masculino">Masculino</option>
+    <option value="Feminino">Feminino</option>
+    <option value="Prefiro não dizer">Prefiro não dizer</option>
+  </select>
+
+  {/* Ícone de seta customizado */}
+  <svg
+    className="absolute right-3 top-[35px] w-4 h-4 text-gray-500 pointer-events-none"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 9l-7 7-7-7"
+    />
+  </svg>
+</div>
+
+
 
 
           <Input
@@ -453,7 +487,7 @@ async function handleConfirmarCodigo() {
         <div id="recaptcha-container" className="mt-3"></div>
       </AuthCard>
 
-      {/* 🔐 Modal SMS */}
+      {/* Modal SMS */}
       <AnimatePresence>
         {mostrarModal && (
           <motion.div
@@ -481,7 +515,7 @@ async function handleConfirmarCodigo() {
                 value={codigoSMS}
                 onChange={(e) => setCodigoSMS(e.target.value)}
                 placeholder="Código SMS"
-                className="w-full border border-gray-400 rounded-md px-3 py-2 text-center text-lg tracking-widest mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-400 rounded-md px-3 py-2 text-center text-lg tracking-widest mb-3 focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
 
               <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
@@ -490,7 +524,7 @@ async function handleConfirmarCodigo() {
                   {contador > 0 ? (
                     <span>Reenviar em {contador}s</span>
                   ) : (
-                    <button type="button" onClick={reenviarSMS} className="text-blue-600 hover:underline">
+                    <button type="button" onClick={reenviarSMS} className="text-gray-600 hover:underline">
                       Reenviar código
                     </button>
                   )}
@@ -500,7 +534,7 @@ async function handleConfirmarCodigo() {
               <div className="flex justify-end gap-2 mt-3">
                 <Button
                   onClick={() => {
-                    // ⚠️ Cancelar apenas fecha modal; mantém formulário para corrigir
+                    // Cancelar apenas fecha modal; mantém formulário para corrigir
                     setMostrarModal(false);
                   }}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-900 px-3 py-1 rounded-md"
@@ -520,7 +554,7 @@ async function handleConfirmarCodigo() {
         )}
       </AnimatePresence>
 
-      {/* 🌟 Modal de Sucesso */}
+      {/* Modal de Sucesso */}
       <AnimatePresence>
         {mostrarSucesso && (
           <motion.div

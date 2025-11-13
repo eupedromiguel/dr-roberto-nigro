@@ -4,6 +4,11 @@ import { functions } from "../../services/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import { IMaskInput } from "react-imask";
 import { useRef } from "react";
+import { useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
+
 
 // Função de páginação
 
@@ -122,6 +127,35 @@ export default function ConsultasScreen() {
   const [unidade, setUnidade] = useState("");
   const toastRef = useRef(null);
   const [toastMsg, setToastMsg] = useState("");
+  const { uid } = useParams();
+  const { user, role } = useAuth();
+
+  const medicoId = role === "doctor" ? user?.uid : uid;
+
+  const db = getFirestore();
+  const navigate = useNavigate();
+  const [nomeMedico, setNomeMedico] = useState("");
+  const [especialidadeMedico, setEspecialidadeMedico] = useState("");
+
+  // Se o usuário for admin, busca o nome do médico
+  useEffect(() => {
+    async function carregarMedico() {
+      if (role !== "admin" || !uid) return;
+      try {
+        const ref = doc(db, "usuarios", uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setNomeMedico(data.nome || "Médico sem nome");
+          setEspecialidadeMedico(data.especialidade || "—");
+        }
+      } catch (e) {
+        console.error("Erro ao buscar médico:", e);
+      }
+    }
+    carregarMedico();
+  }, [role, uid]);
+
 
   function showToast(message, duration = 3000) {
     setToastMsg(message);
@@ -215,10 +249,10 @@ export default function ConsultasScreen() {
     return idade;
   }
 
-  async function carregarConsultas() {
+  async function carregarConsultas(medicoId) {
     try {
       const listar = httpsCallable(functions, "consultas-listarConsultas");
-      const res = await listar();
+      const res = await listar({ medicoId });
       if (!res.data?.sucesso) {
         setErro("Erro ao carregar consultas.");
         return;
@@ -246,6 +280,8 @@ export default function ConsultasScreen() {
             nome: c.paciente.nome,
             telefone: c.paciente.telefone || "(sem telefone)",
             idade: calcularIdade(c.paciente.dataNascimento),
+            cpf: c.paciente.cpf || "—",
+            sexoBiologico: c.paciente.sexoBiologico || "—",
           };
         }
       }
@@ -258,8 +294,10 @@ export default function ConsultasScreen() {
   }
 
   useEffect(() => {
-    carregarConsultas();
-  }, []);
+    if (!medicoId) return;
+    carregarConsultas(medicoId);
+  }, [medicoId]);
+
 
   useEffect(() => {
     setPaginaAtual(1);
@@ -311,7 +349,7 @@ export default function ConsultasScreen() {
       const agora = new Date();
 
       if (agora < dataHoraConsulta) {
-        showToast("Não é possível concluir uma consulta antes do horário agendado.");
+        showToast("Não é possível concluir uma consulta ou retorno antes do horário agendado.");
         return;
       }
     } catch (err) {
@@ -551,6 +589,34 @@ export default function ConsultasScreen() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+
+{role === "admin" && (
+  <div className="flex items-center justify-between mb-4">
+    <div>
+      {nomeMedico ? (
+        <>
+          <h2 className="text-xl font-semibold text-white">
+            Consultas de {nomeMedico}
+          </h2>
+          <p className="text-sm text-gray-400">{especialidadeMedico}</p>
+        </>
+      ) : (
+        <div className="animate-pulse">
+          <div className="h-5 bg-gray-700 rounded w-40 mb-1"></div>
+          <div className="h-3 bg-gray-700 rounded w-28"></div>
+        </div>
+      )}
+    </div>
+    <button
+      onClick={() => navigate("/admin/agendas")}
+      className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-4 py-2 rounded-md transition"
+    >
+      ← Voltar
+    </button>
+  </div>
+)}
+
+      
       <h2 className="text-2xl font-semibold text-white mb-4">
         Consultas marcadas
       </h2>
@@ -566,7 +632,7 @@ export default function ConsultasScreen() {
         </p>
       )}
 
-      {/* 🔍 Barra de busca e filtro */}
+      {/* Barra de busca e filtro */}
       <div className="flex flex-col md:flex-row !text-gray-500 items-center justify-between gap-3 mb-6">
         {/* Campo de nome */}
         <input
@@ -668,220 +734,234 @@ export default function ConsultasScreen() {
             return (
               <li
                 key={c.id}
-                className="border p-4 rounded-md bg-white shadow-sm hover:bg-gray-50 transition"
+                className="border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-5"
               >
-                <p>
-                  <b>Paciente:</b>{" "}
-                  <span className="text-gray-950">
-                    {paciente?.nome || "Carregando..."}
-                    {paciente?.idade && (
-                      <span className="text-gray-600">
-                        {" "}
-                        ({paciente.idade} anos)
-                      </span>
+                {/* Cabeçalho com nome do paciente */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {paciente?.nome || "Carregando..."}{" "}
+                      {paciente?.idade && (
+                        <span className="text-gray-500 text-sm font-normal">
+                          ({paciente.idade} anos)
+                        </span>
+                      )}
+                    </h3>
+                    {paciente?.sexoBiologico && (
+                      <p className="text-sm mt-0.5">
+                        <b>Sexo biológico:</b>{" "}
+                        <span
+                          className={`${paciente.sexoBiologico === "Feminino"
+                            ? "text-pink-600"
+                            : paciente.sexoBiologico === "Masculino"
+                              ? "text-blue-600"
+                              : "text-gray-700"
+                            } font-medium`}
+                        >
+                          {paciente.sexoBiologico}
+                        </span>
+                      </p>
                     )}
-                  </span>
-                </p>
+                  </div>
 
-                {paciente?.telefone &&
-                  paciente.telefone !== "(sem telefone)" && (
+                  {/* Status badge */}
+                  <span
+                    className={`px-3 py-1 text-xs font-semibold rounded-full self-start
+        ${c.status === "cancelada"
+                        ? "bg-red-100 text-red-700"
+                        : c.status === "concluida"
+                          ? "bg-green-100 text-green-700"
+                          : c.status === "retorno"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-yellow-100 text-yellow-700"
+                      }`}
+                  >
+                    {formatarStatus(c.status)}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-sm text-gray-700">
+                  {paciente?.telefone && paciente.telefone !== "(sem telefone)" && (
                     <p>
                       <b>Telefone:</b>{" "}
                       <a
                         href={gerarLinkTelefone(paciente.telefone)}
-                        className="text-gray-950 font-medium underline"
+                        className="text-gray-900 underline"
                       >
                         {paciente.telefone}
                       </a>
                     </p>
                   )}
 
-                <p>
-                  <b>Data e hora:</b> {formatarDataHora(c.horario)}
-                </p>
-                <p>
-                  <b>Tipo de consulta:</b>{" "}
-                  {tipo === "teleconsulta" ? "Teleconsulta" : "Presencial"}
-                </p>
-                {c.tipoAtendimento === "particular" && (
-                  <>
-                    {tipo === "teleconsulta" && c.valorteleConsulta && (
-                      <p>
-                        <b>Valor da teleconsulta:</b>{" "}
-                        <span className="font-semibold text-gray-950">
-                          R$ {parseFloat(c.valorteleConsulta).toFixed(2)}
-                        </span>
-                      </p>
-                    )}
+                  {paciente?.cpf && (
+                    <p>
+                      <b>CPF:</b> {paciente.cpf}
+                    </p>
+                  )}
 
-                    {tipo === "presencial" && c.valorConsulta && (
-                      <p>
-                        <b>Valor da consulta presencial:</b>{" "}
-                        <span className="font-normal text-gray-950">
-                          R$ {parseFloat(c.valorConsulta).toFixed(2)}
-                        </span>
-                      </p>
-                    )}
-                  </>
-                )}
+                  <p>
+                    <b>Data e hora:</b> {formatarDataHora(c.horario)}
+                  </p>
+                  <p>
+                    <b>Tipo de consulta:</b>{" "}
+                    {tipo === "teleconsulta" ? "Teleconsulta" : "Presencial"}
+                  </p>
 
-                {c.unidade && (
-                  <p>
-                    <b>Unidade:</b> {c.unidade}
-                  </p>
-                )}
+                  {c.tipoAtendimento === "particular" && (
+                    <>
+                      {tipo === "teleconsulta" && c.valorteleConsulta && (
+                        <p>
+                          <b>Valor da teleconsulta:</b>{" "}
+                          <span className="font-semibold text-gray-900">
+                            R$ {parseFloat(c.valorteleConsulta).toFixed(2)}
+                          </span>
+                        </p>
+                      )}
+                      {tipo === "presencial" && c.valorConsulta && (
+                        <p>
+                          <b>Valor presencial:</b>{" "}
+                          <span className="font-semibold text-gray-900">
+                            R$ {parseFloat(c.valorConsulta).toFixed(2)}
+                          </span>
+                        </p>
+                      )}
+                    </>
+                  )}
 
-                {c.sintomas && (
-                  <p>
-                    <b>Sintomas ou alergias:</b> {c.sintomas}
-                  </p>
-                )}
-                {c.tipoAtendimento && (
-                  <p>
-                    <b>Tipo de atendimento:</b> {c.tipoAtendimento}
-                  </p>
-                )}
-                {c.convenio && (
-                  <p>
-                    <b>Convênio:</b> {c.convenio}
-                  </p>
-                )}
+                  {c.unidade && (
+                    <p>
+                      <b>Unidade:</b> {c.unidade}
+                    </p>
+                  )}
 
-                {/* Detalhes do Retorno */}
+                  {c.tipoAtendimento && (
+                    <p>
+                      <b>Tipo de atendimento:</b> {c.tipoAtendimento}
+                    </p>
+                  )}
+                  {c.convenio && (
+                    <p>
+                      <b>Convênio:</b> {c.convenio}
+                    </p>
+                  )}
+
+                  {c.sintomas && (
+                    <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-100">
+                      <b>Sintomas / Alergias:</b> {c.sintomas}
+                    </div>
+                  )}
+                </div>
+
+                {/* Retorno */}
                 {c.retornoAgendado && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-gray-200 rounded-lg text-sm text-blue-900">
-                    <p className="font-medium mb-1">📋 <b>Detalhes do Retorno</b></p>
+                  <div className="mt-4 border-t border-gray-200 bg-yellow-50 pt-3 pb-3 px-3 rounded-lg text-sm">
 
+                    <p className="font-semibold text-gray-900 mb-1">📋 Retorno agendado:</p>
                     <p>
                       <b>Data e horário:</b>{" "}
                       {formatarDataHora(
                         `${c.retornoAgendado.novaData} ${c.retornoAgendado.novoHorario}`
                       )}
                     </p>
-
                     <p>
-                      <b>Tipo de retorno:</b>{" "}
+                      <b>Tipo:</b>{" "}
                       {c.retornoAgendado.tipoRetorno === "teleconsulta"
                         ? "Teleconsulta"
                         : "Presencial"}
                     </p>
-
                     {c.retornoAgendado.unidade && (
                       <p>
-                        <b>Unidade do retorno:</b> {c.retornoAgendado.unidade}
+                        <b>Unidade:</b> {c.retornoAgendado.unidade}
                       </p>
                     )}
-
                     {c.retornoAgendado.observacoes && (
                       <p>
-                        <b>Observações:</b> {c.retornoAgendado.observacoes}
+                        <b>Obs:</b> {c.retornoAgendado.observacoes}
                       </p>
                     )}
                   </div>
                 )}
-                <br />
 
-                <p className="text-sm text-gray-700 mt-1">
-                  <b>Status:</b>{" "}
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold
-      ${c.status === "cancelada"
-                        ? "bg-red-100 text-red-800"
-                        : c.status === "concluida"
-                          ? "bg-green-100 text-green-800"
-                          : c.status === "retorno"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-yellow-100 text-yellow-800"
-                      }`}
-                  >
-                    {formatarStatus(c.status)}
-                  </span>
-                </p>
+                {/* Botões */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {c.status === "agendado" && (
+                    <>
+                      <button
+                        onClick={() => handleConcluir(c.id)}
+                        disabled={loadingConcluirId === c.id}
+                        className={`${loadingConcluirId === c.id
+                          ? "bg-green-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                          } text-white px-3 py-1.5 rounded-md text-sm flex items-center gap-2`}
+                      >
+                        {loadingConcluirId === c.id && (
+                          <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                        )}
+                        {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
+                      </button>
 
+                      <button
+                        onClick={() => handleAbrirModal(c.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  )}
 
-                {c.status === "agendado" && (
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleConcluir(c.id)}
-                      disabled={loadingConcluirId === c.id}
-                      className={`${loadingConcluirId === c.id
-                        ? "bg-green-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                        } text-white px-3 py-1 rounded-md text-sm flex items-center gap-2`}
-                    >
-                      {loadingConcluirId === c.id && (
-                        <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
-                      )}
-                      {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
-                    </button>
-
-                    <button
-                      onClick={() => handleAbrirModal(c.id)}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                )}
-
-                {c.status === "concluida" && !c.retornoAgendado && (
-                  <div className="flex gap-2 mt-3">
+                  {c.status === "concluida" && !c.retornoAgendado && (
                     <button
                       onClick={() => handleAbrirModalRetorno(c.id)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
                     >
                       Agendar Retorno
                     </button>
-                  </div>
-                )}
+                  )}
 
-                {c.status === "retorno" && (
-                  <div className="flex gap-2 mt-3">
-                    {/* 🔁 Botão Remarcar Retorno */}
-                    <button
-                      onClick={() => {
-                        setConsultaParaRetorno(c.id);
-                        setNovaData(
-                          c.retornoAgendado?.novaData
-                            ? c.retornoAgendado.novaData.split("-").reverse().join("/")
-                            : ""
-                        );
-                        setNovoHorario(c.retornoAgendado?.novoHorario || "");
-                        setObservacoes(c.retornoAgendado?.observacoes || "");
-                        setModalRetorno(true);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm"
-                    >
-                      Remarcar Retorno
-                    </button>
+                  {c.status === "retorno" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setConsultaParaRetorno(c.id);
+                          setNovaData(
+                            c.retornoAgendado?.novaData
+                              ? c.retornoAgendado.novaData.split("-").reverse().join("/")
+                              : ""
+                          );
+                          setNovoHorario(c.retornoAgendado?.novoHorario || "");
+                          setObservacoes(c.retornoAgendado?.observacoes || "");
+                          setModalRetorno(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+                      >
+                        Remarcar Retorno
+                      </button>
 
-                    {/* Botão Marcar como Concluído */}
-                    <button
-                      onClick={() => {
-                        setConsultaParaConcluirRetorno(c.id);
-                        setModalConcluirRetorno(true);
-                      }}
-                      disabled={loadingConcluirId === c.id}
-                      className={`${loadingConcluirId === c.id
-                        ? "bg-green-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                        } text-white px-3 py-1 rounded-md text-sm flex items-center gap-2`}
-                    >
-                      {loadingConcluirId === c.id && (
-                        <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
-                      )}
-                      {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
-                    </button>
+                      <button
+                        onClick={() => {
+                          setConsultaParaConcluirRetorno(c.id);
+                          setModalConcluirRetorno(true);
+                        }}
+                        disabled={loadingConcluirId === c.id}
+                        className={`${loadingConcluirId === c.id
+                          ? "bg-green-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                          } text-white px-3 py-1.5 rounded-md text-sm flex items-center gap-2`}
+                      >
+                        {loadingConcluirId === c.id && (
+                          <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                        )}
+                        {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
+                      </button>
+                    </>
+                  )}
+                </div>
 
-                  </div>
-                )}
-
-<div className="mt-3 text-[11px] text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded select-all w-fit">
-  ID: {c.id}
-</div>
-
-
+                <div className="mt-3 text-[11px] text-gray-400 font-mono bg-gray-50 px-2 py-1 rounded select-all w-fit">
+                  ID: {c.id}
+                </div>
               </li>
+
             );
           })}
         </ul>
@@ -1164,20 +1244,20 @@ export default function ConsultasScreen() {
         )}
       </AnimatePresence>
 
-{/* Toast simples */}
-<AnimatePresence>
-  {toastMsg && (
-    <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      className="fixed top-6 right-6 bg-red-100 text-red px-4 py-2 rounded-md shadow-lg z-50"
-    >
-      {toastMsg}
-    </motion.div>
-  )}
-</AnimatePresence>
+      {/* Toast simples */}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="fixed top-6 right-6 bg-red-100 text-red px-4 py-2 rounded-md shadow-lg z-50"
+          >
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
     </div>

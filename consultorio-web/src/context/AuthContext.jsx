@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 🧩 flags internas (não disparam re-render)
+  // flags internas (não disparam re-render)
   const reloadedOnce = useRef(false);
   const syncedEmailVerified = useRef(false);
 
@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
   const location = useLocation();
 
   // =====================================================
-  // 🔹 Tenta buscar o claim "role" com algumas tentativas
+  // Tenta buscar o claim "role" com algumas tentativas
   // =====================================================
   async function fetchRoleWithRetries(currentUser, { tries = 6, interval = 400 } = {}) {
     for (let i = 0; i < tries; i++) {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
   }
 
   // =====================================================
-  // 🔹 Escuta o estado de autenticação (login / logout / refresh)
+  // Escuta o estado de autenticação (login / logout / refresh)
   // =====================================================
   useEffect(() => {
     const unsub = onIdTokenChanged(auth, async (u) => {
@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
 
       try {
         // -------------------------
-        // 🔴 Usuário deslogado
+        // Usuário deslogado
         // -------------------------
         if (!u) {
           setUser(null);
@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
         }
 
         // -------------------------
-        // 🔁 Faz reload apenas uma vez por login
+        // Faz reload apenas uma vez por login
         // -------------------------
         if (!reloadedOnce.current) {
           try {
@@ -66,19 +66,19 @@ export function AuthProvider({ children }) {
         }
 
         // -------------------------
-        // ✅ Atualiza user local
+        // Atualiza user local
         // -------------------------
         const refreshedUser = auth.currentUser;
         setUser(refreshedUser);
 
-        // 🟢 Se e-mail acabou de ser verificado → sincroniza apenas o campo, sem criar doc
+        // Se e-mail acabou de ser verificado → sincroniza apenas o campo, sem criar doc
 
       if (refreshedUser?.emailVerified && !syncedEmailVerified.current) {
         try {
           const ref = doc(db, "usuarios", refreshedUser.uid);
           const snap = await getDoc(ref);
 
-          // 🔹 Só sincroniza se o documento existir
+          // Só sincroniza se o documento existir
           if (snap.exists()) {
             await setDoc(ref, { emailVerificado: true }, { merge: true });
             console.log("✅ Campo 'emailVerificado' sincronizado no Firestore!");
@@ -94,7 +94,7 @@ export function AuthProvider({ children }) {
 
 
         // -------------------------
-        // 🎭 Obtém o papel (role)
+        // Obtém o papel (role)
         // -------------------------
         const first = await getIdTokenResult(u);
         let claimRole = first.claims?.role || null;
@@ -115,7 +115,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   // =====================================================
-  // 🔹 Valor do contexto (compartilhado com o app)
+  // Valor do contexto (compartilhado com o app)
   // =====================================================
   const value = useMemo(
     () => ({

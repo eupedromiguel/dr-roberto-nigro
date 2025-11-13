@@ -1,9 +1,23 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Menu, X, Instagram } from "lucide-react";
+import {
+  Menu,
+  X,
+  Hospital,
+  User,
+  Calendar,
+  ClipboardList,
+  LogIn,
+  LogOut,
+  UserPlus,
+  MapPin,
+  Stethoscope,
+  Instagram,
+} from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
+import SidebarAdmin from "./SidebarAdmin";
 
 export default function Navbar() {
   const { user, role, logout } = useAuth();
@@ -16,33 +30,37 @@ export default function Navbar() {
     navigate("/");
   }
 
+  if (user && role === "admin") {
+    return <SidebarAdmin />;
+  }
+
   // Menus por tipo de usuário
   const menusByRole = {
     patient: [
-      { label: "Unidades", path: "/unidades" },
-      { label: "Meu perfil", path: "/perfil" },
-      { label: "Marcar consulta", path: "/paciente/agendar" },
-      { label: "Meus agendamentos", path: "/paciente/agendamentos" },
+      { label: "Unidades", path: "/unidades", icon: MapPin },
+      { label: "Meu perfil", path: "/perfil", icon: User },
+      { label: "Marcar", path: "/paciente/agendar", icon: Calendar },
+      { label: "Agendamentos", path: "/paciente/agendamentos", icon: ClipboardList },
     ],
     doctor: [
-      { label: "Unidades", path: "/unidades" },
-      { label: "Minha agenda", path: "/medico/agenda" },
-      { label: "Consultas marcadas", path: "/medico/consultas" },
-      { label: "Meu perfil", path: "/perfil" },
+      { label: "Unidades", path: "/unidades", icon: MapPin },
+      { label: "Vagas", path: "/medico/agenda", icon: Calendar },
+      { label: "Agenda", path: "/medico/consultas", icon: ClipboardList },
+      { label: "Meu perfil", path: "/perfil", icon: User },
     ],
     admin: [
-      { label: "Unidades", path: "/unidades" },
-      { label: "Usuários", path: "/admin/usuarios" },
-      { label: "Médicos", path: "/admin/medicos" },
-      { label: "Meu perfil", path: "/perfil" },
+      { label: "Unidades", path: "/unidades", icon: MapPin },
+      { label: "Gerenciar usuários", path: "/admin/usuarios", icon: User },
+      { label: "Gerenciar médicos", path: "/admin/medicos", icon: Stethoscope },
+      { label: "Meu perfil", path: "/perfil", icon: User },
     ],
   };
 
   // Menus públicos
   const publicMenus = [
-    { label: "Unidades", path: "/unidades" },
-    { label: "Entrar", path: "/login" },
-    { label: "Cadastrar-se", path: "/register" },
+    { label: "Unidades", path: "/unidades", icon: MapPin },
+    { label: "Entrar", path: "/login", icon: LogIn },
+    { label: "Cadastrar-se", path: "/register", icon: UserPlus },
   ];
 
   const menus = user ? menusByRole[role] || [] : publicMenus;
@@ -56,23 +74,19 @@ export default function Navbar() {
   // Função de classe ativa
   function linkClasses(path) {
     const isActive = location.pathname === path;
-    return `px-3 py-2 rounded-md text-sm font-medium transition ${
-      isActive
-        ? "bg-yellow-400 text-white font-semibold"
-        : "hover:bg-yellow-400"
-    }`;
+    return `px-2 py-2 rounded-md text-sm font-medium transition ${isActive ? "bg-yellow-400 text-white font-semibold" : "hover:bg-yellow-400"
+      }`;
   }
 
   return (
     <nav className="bg-gray-800 text-white shadow-md relative">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-        {/* Nome da clínica */}
+      <div className="max-w-6xl mx-auto px-5 py-3 flex justify-between items-center">
         <Link
           to="/"
           className="flex items-center gap-2 font-ubuntu text-xl tracking-wide hover:opacity-50 transition"
         >
-        
-          <span>Clínica Dr.Roberto Nigro</span>
+
+          <span>Clínica Dr. Roberto Nigro</span>
         </Link>
 
         {/* Botão Mobile */}
@@ -85,21 +99,19 @@ export default function Navbar() {
 
         {/* Menu Desktop */}
         <div className="hidden md:flex items-center space-x-4">
-          {menus.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={linkClasses(item.path)}
-            >
-              {item.label}
+          {menus.map(({ label, path, icon: Icon }) => (
+            <Link key={path} to={path} className={`flex items-center gap-2 ${linkClasses(path)}`}>
+              <Icon size={16} />
+              {label}
             </Link>
           ))}
 
           {user && (
             <button
               onClick={handleLogout}
-              className="ml-3 hover:bg-yellow-400 px-3 py-1 rounded-md text-sm font-medium transition"
+              className="ml-0 hover:bg-yellow-400 px-3 py-1 rounded-md text-sm font-medium transition flex items-center gap-2"
             >
+              <LogOut size={16} />
               Sair
             </button>
           )}
@@ -139,7 +151,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Menu Mobile (animado) */}
+      {/* Menu Mobile */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
@@ -150,18 +162,18 @@ export default function Navbar() {
             className="md:hidden bg-gray-700 border-t border-white overflow-hidden"
           >
             <div className="flex flex-col p-3 space-y-2">
-              {menus.map((item) => (
+              {menus.map(({ label, path, icon: Icon }) => (
                 <Link
-                  key={item.path}
-                  to={item.path}
+                  key={path}
+                  to={path}
                   onClick={() => setMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md text-sm transition ${
-                    location.pathname === item.path
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition ${location.pathname === path
                       ? "bg-yellow-400 text-white font-semibold"
                       : "hover:bg-yellow-400"
-                  }`}
+                    }`}
                 >
-                  {item.label}
+                  <Icon size={16} />
+                  {label}
                 </Link>
               ))}
 

@@ -1,6 +1,3 @@
-// =======================================
-// src/screens/Public/UnidadesScreen.jsx
-// =======================================
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
@@ -41,11 +38,11 @@ export default function UnidadesScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-gray-800 text-white">
       {/* Cabeçalho */}
-      <section className="text-center py-12 px-6 bg-gray-50 border-b border-gray-200">
-        <h1 className="text-4xl font-bold mb-3">Nossas Unidades</h1>
-        <p className="max-w-2xl mx-auto text-gray-600">
+      <section className="text-center py-12 px-6 bg-gray-800 border-b border-gray-200">
+        <h1 className="text-4xl font-momo mb-3">Nossas Unidades</h1>
+        <p className="max-w-2xl mx-auto text-white">
           Conheça as unidades da Clínica Dr. Roberto Nigro e escolha a mais próxima de você.
         </p>
       </section>
@@ -62,28 +59,28 @@ export default function UnidadesScreen() {
             i % 2 ? "md:flex-row-reverse" : ""
           }`}
         >
-          {/* 🎞️ SLIDES com título acima */}
+          {/* SLIDES com título acima */}
           <div>
-            <h2 className="text-2xl md:text-3xl font-semibold mb-5 text-gray-800 text-center md:text-left">
+            <h2 className="text-2xl md:text-3xl font-semibold mb-5 text-white text-center md:text-left">
               {uni.nome}
             </h2>
             <SlideShow slides={uni.slides} />
           </div>
 
-          {/* 📍 Dados da unidade */}
+          {/* Dados da unidade */}
           <div>
             <p className="mb-1">{uni.endereco}</p>
-            <p className="font-medium text-gray-800">📞 {uni.telefone}</p>
-            <p className="mb-4 text-gray-700">🕒 {uni.horario}</p>
+            <p className="font-medium text-white">📞 {uni.telefone}</p>
+            <p className="mb-4 text-white">🕒 {uni.horario}</p>
 
-            {/* 🗺️ Mapa com spinner */}
+            {/* Mapa com spinner */}
             <MapWithSpinner src={uni.mapa} />
 
             <a
               href={uni.mapsLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block bg-yellow-400 hover:bg-yellow-500 text-white font-medium px-4 py-2 rounded-md transition"
+              className="inline-block bg-gray-950 hover:bg-yellow-400 text-white font-medium px-4 py-2 rounded-md transition"
             >
               Ver no Google Maps
             </a>
@@ -95,7 +92,7 @@ export default function UnidadesScreen() {
 }
 
 // =======================================
-// 🗺️ Componente com spinner de carregamento do mapa
+// Componente com spinner de carregamento do mapa
 // =======================================
 function MapWithSpinner({ src }) {
   const [loading, setLoading] = useState(true);
@@ -121,7 +118,7 @@ function MapWithSpinner({ src }) {
 }
 
 // =======================================
-// 🎞️ SlideShow com spinner e indicadores
+// SlideShow com spinner e indicadores
 // =======================================
 function SlideShow({ slides }) {
   const [index, setIndex] = useState(0);
@@ -163,7 +160,7 @@ function SlideShow({ slides }) {
         />
       ))}
 
-      {/* 🔘 Indicadores */}
+      {/* Indicadores */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
         {slides.map((_, i) => (
           <button

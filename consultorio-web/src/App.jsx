@@ -40,7 +40,11 @@ import ConsultasScreen from "./screens/Medico/ConsultasScreen";
 // Páginas de administrador
 // ===============================
 import UsuariosScreen from "./screens/Admin/UsuariosScreen";
-import MedicosScreen from "./screens/Admin/MedicosScreen"; // 🆕 nova importação
+import MedicosScreen from "./screens/Admin/MedicosScreen";
+import GerenciarAgendas from "./screens/Admin/GerenciarAgendas";
+import GerenciarPlanos from "./screens/Admin/GerenciarPlanos";
+import GerenciarSlots from "./screens/Admin/GerenciarSlots";
+import Notificacoes from "./screens/Admin/Notificacoes";
 
 // ===============================
 // Rotas de controle
@@ -55,7 +59,7 @@ export default function App() {
         <div className="relative min-h-screen">
           <Routes>
             {/* ========================================= */}
-            {/* 🔓 ROTAS PÚBLICAS */}
+            {/* ROTAS PÚBLICAS */}
             {/* ========================================= */}
             <Route
               path="/"
@@ -98,7 +102,7 @@ export default function App() {
             />
 
             {/* ========================================= */}
-            {/* 📨 GERENCIADOR DE AÇÕES DE E-MAIL */}
+            {/* GERENCIADOR DE AÇÕES DE E-MAIL */}
             {/* ========================================= */}
             <Route
               path="/auth/action"
@@ -111,7 +115,7 @@ export default function App() {
 
 
             {/* ========================================= */}
-            {/* 🔒 ROTAS PRIVADAS (GERAIS) */}
+            {/* ROTAS PRIVADAS (GERAIS) */}
             {/* ========================================= */}
             <Route
               path="/perfil"
@@ -125,7 +129,7 @@ export default function App() {
             />
 
             {/* ========================================= */}
-            {/* 👤 PACIENTE */}
+            {/* PACIENTE */}
             {/* ========================================= */}
             <Route
               path="/paciente/agendar"
@@ -172,12 +176,23 @@ export default function App() {
             />
 
             {/* ========================================= */}
-            {/* 🩺 MÉDICO */}
+            {/* MÉDICO */}
             {/* ========================================= */}
             <Route
               path="/medico/agenda"
               element={
                 <PrivateRoute roles={["doctor"]}>
+                  <PrivateLayout>
+                    <AgendaScreen />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/medico/agenda/:uid"
+              element={
+                <PrivateRoute roles={["doctor", "admin"]}>
                   <PrivateLayout>
                     <AgendaScreen />
                   </PrivateLayout>
@@ -196,8 +211,20 @@ export default function App() {
               }
             />
 
+
+            <Route
+              path="/medico/consultas/:uid"
+              element={
+                <PrivateRoute roles={["doctor", "admin"]}>
+                  <PrivateLayout>
+                    <ConsultasScreen />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
             {/* ========================================= */}
-            {/* ⚙️ ADMINISTRADOR */}
+            {/* ADMINISTRADOR */}
             {/* ========================================= */}
             <Route
               path="/admin/usuarios"
@@ -210,13 +237,56 @@ export default function App() {
               }
             />
 
-            {/* 🆕 NOVA ROTA — Gerenciar Médicos */}
             <Route
               path="/admin/medicos"
               element={
                 <PrivateRoute roles={["admin"]}>
                   <PrivateLayout>
                     <MedicosScreen />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/admin/slots"
+              element={
+                <PrivateRoute roles={["admin"]}>
+                  <PrivateLayout>
+                    <GerenciarSlots />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/admin/agendas"
+              element={
+                <PrivateRoute roles={["admin"]}>
+                  <PrivateLayout>
+                    <GerenciarAgendas />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/admin/planos"
+              element={
+                <PrivateRoute roles={["admin"]}>
+                  <PrivateLayout>
+                    <GerenciarPlanos />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/admin/notificacoes"
+              element={
+                <PrivateRoute roles={["admin"]}>
+                  <PrivateLayout>
+                    <Notificacoes />
                   </PrivateLayout>
                 </PrivateRoute>
               }
@@ -248,7 +318,7 @@ export default function App() {
           </Routes>
 
           {/* ========================================= */}
-          {/* 💬 BOTÃO FLUTUANTE DO WHATSAPP */}
+          {/* BOTÃO FLUTUANTE DO WHATSAPP */}
           {/* ========================================= */}
           <div className="fixed bottom-5 right-5 z-50 group">
             <span className="absolute inset-0 rounded-full bg-green-400 opacity-50 scale-100" />

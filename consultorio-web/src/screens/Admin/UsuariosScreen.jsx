@@ -95,8 +95,8 @@ export default function UsuariosScreen() {
           onClick={handleRecarregar}
           disabled={loading || recarregando}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border transition ${recarregando
-              ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
-              : "border-slate-50 text-slate-50 hover:bg-yellow-400 hover:text-white"
+            ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed"
+            : "border-slate-50 text-slate-50 hover:bg-yellow-400 hover:text-white"
             }`}
         >
           <RefreshCw
@@ -213,18 +213,38 @@ export default function UsuariosScreen() {
                           Atualizando...
                         </span>
                       ) : (
-                        <select
-                          value={u.role || ""}
-                          onChange={(e) =>
-                            handleRoleChange(u.uid, e.target.value)
-                          }
-                          className="border border-slate-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">—</option>
-                          <option value="patient">Paciente</option>
-                          <option value="doctor">Médico</option>
-                          <option value="admin">Administrador</option>
-                        </select>
+
+                        <div className="relative inline-block">
+                          <select
+                            value={u.role || ""}
+                            onChange={(e) => handleRoleChange(u.uid, e.target.value)}
+                            className="appearance-none border border-slate-300 rounded-md px-3 py-1.5 pr-8 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-400 cursor-pointer"
+                          >
+                            <option value="">—</option>
+                            <option value="patient">Paciente</option>
+                            <option value="doctor">Médico</option>
+                            <option value="admin">Administrador</option>
+                          </select>
+
+                          {/* Ícone de seta customizada */}
+                          <svg
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+
+
+
                       )}
                     </td>
                   </tr>

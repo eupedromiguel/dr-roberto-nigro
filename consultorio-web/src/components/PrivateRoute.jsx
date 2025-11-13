@@ -1,25 +1,31 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+function LoadingScreen({ message = "Carregando sessão..." }) {
+  return (
+    <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-900 text-white">
+      <div className="animate-spin h-12 w-12 border-4 border-yellow-400 border-t-transparent rounded-full mb-4"></div>
+      <p className="text-lg opacity-80">{message}</p>
+    </div>
+  );
+}
+
 export default function PrivateRoute({ children, roles }) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
-    return <div className="p-4">Carregando sessão...</div>;
+    return <LoadingScreen />;
   }
 
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
-  // Se a rota exige papéis específicos
   if (roles && roles.length > 0) {
     if (!role) {
-      // Ainda sem role (muito raro após o AuthContext), segura um feedback
-      return <div className="p-4">Carregando permissões...</div>;
+      return <LoadingScreen message="Carregando permissões..." />;
     }
     if (!roles.includes(role)) {
-      // Sem permissão → manda pra uma rota segura (ex.: perfil)
       return <Navigate to="/perfil" replace />;
     }
   }

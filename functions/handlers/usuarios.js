@@ -69,7 +69,8 @@ exports.criarUsuario = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
-  const { nome, telefone, cpf, dataNascimento, ...rest } = request.data || {};
+  const { nome, telefone, cpf, dataNascimento, sexoBiologico, ...rest } = request.data || {};
+
 
   // LOG — o que chegou do front
   console.log("📥 Dados recebidos do front:", request.data);
@@ -134,6 +135,7 @@ exports.criarUsuario = onCall(async (request) => {
       telefone: typeof telefone === "string" ? telefone : null,
       cpf: typeof cpf === "string" ? cpf : null,
       dataNascimento: typeof dataNascimento === "string" ? dataNascimento : null,
+      sexoBiologico: typeof sexoBiologico === "string" ? sexoBiologico : null,
       role,
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -209,7 +211,8 @@ exports.atualizarUsuario = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
-  const { nome, telefone, cpf, dataNascimento, role } = request.data || {};
+  const { nome, telefone, cpf, dataNascimento, sexoBiologico, role } = request.data || {};
+
 
   if (typeof role !== "undefined") {
     throw new HttpsError(
@@ -223,6 +226,7 @@ exports.atualizarUsuario = onCall(async (request) => {
   if (typeof telefone === "string") updates.telefone = telefone;
   if (typeof cpf === "string") updates.cpf = cpf;
   if (typeof dataNascimento === "string") updates.dataNascimento = dataNascimento;
+  if (typeof sexoBiologico === "string") updates.sexoBiologico = sexoBiologico;
   updates.atualizadoEm = admin.firestore.FieldValue.serverTimestamp();
 
   if (Object.keys(updates).length === 1) {

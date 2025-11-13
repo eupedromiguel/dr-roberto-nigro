@@ -11,7 +11,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, User, UserRound, Mail, Phone, CreditCard, Calendar, CheckCircle, AlertCircle, Edit, Trash2, LogOut } from "lucide-react";
 import { IMaskInput } from "react-imask";
 
 export default function PerfilScreen() {
@@ -21,7 +21,7 @@ export default function PerfilScreen() {
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregandoPerfil, setCarregandoPerfil] = useState(true);
-  const [salvando, setSalvando] = useState(false);  
+  const [salvando, setSalvando] = useState(false);
   const [modo, setModo] = useState(null);
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
@@ -39,6 +39,7 @@ export default function PerfilScreen() {
     telefone: "",
     cpf: "",
     dataNascimento: "",
+    sexoBiologico: "",
   });
 
   // Carregar perfil (reutilizável)
@@ -53,6 +54,7 @@ export default function PerfilScreen() {
         telefone: res.data.perfil?.telefone || "",
         cpf: res.data.perfil?.cpf || "",
         dataNascimento: res.data.perfil?.dataNascimento || "",
+        sexoBiologico: res.data.perfil?.sexoBiologico || "",
       });
     } catch (e) {
       setErro(e.message || String(e));
@@ -62,34 +64,34 @@ export default function PerfilScreen() {
   }, []);
 
   useEffect(() => {
-  const carregar = async () => {
-    if (!user) return;
+    const carregar = async () => {
+      if (!user) return;
 
-    // Atualiza o estado de verificação do e-mail no Auth
-    await auth.currentUser?.reload();
-    const verificado = auth.currentUser?.emailVerified || false;
-    setEmailVerificado(verificado);
-
-
-    /// (Opcional) Atualiza também no Firestore se acabou de verificar
-if (verificado) {
-  try {
-    const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario");
-    await atualizar({ emailVerificado: true });
-  } catch (e) {
-    // 🩶 Ignora apenas o erro esperado (campo não aceito)
-    if (!e.message.includes("Nenhum campo válido")) {
-      console.warn("⚠️ Falha real ao sincronizar emailVerificado no Firestore:", e.message);
-    }
-  }
-}
+      // Atualiza o estado de verificação do e-mail no Auth
+      await auth.currentUser?.reload();
+      const verificado = auth.currentUser?.emailVerified || false;
+      setEmailVerificado(verificado);
 
 
-        // 🔹 Carrega o restante do perfil
-        await carregarPerfil();
-      };
-      carregar();
-    }, [user, carregarPerfil]);
+      /// (Opcional) Atualiza também no Firestore se acabou de verificar
+      if (verificado) {
+        try {
+          const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario");
+          await atualizar({ emailVerificado: true });
+        } catch (e) {
+          // Ignora apenas o erro esperado (campo não aceito)
+          if (!e.message.includes("Nenhum campo válido")) {
+            console.warn("⚠️ Falha real ao sincronizar emailVerificado no Firestore:", e.message);
+          }
+        }
+      }
+
+
+      // Carrega o restante do perfil
+      await carregarPerfil();
+    };
+    carregar();
+  }, [user, carregarPerfil]);
 
 
   // Ocultar mensagens após 5s
@@ -108,7 +110,7 @@ if (verificado) {
     const p = dataStr.split(/[\/\-]/);
     let dd, mm, yyyy;
     if (p[0]?.length === 4) [yyyy, mm, dd] = p;
-    else [dd, mm, yyyy] = p;
+    else[dd, mm, yyyy] = p;
     if (!yyyy || !mm || !dd) return "(data inválida)";
     return `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${yyyy}`;
   }
@@ -119,8 +121,35 @@ if (verificado) {
     return `${yyyy}-${mm}-${dd}`;
   }
 
+  function validarDataNascimento(dataStr) {
+    if (!dataStr) return false;
+
+    const [dd, mm, yyyy] = dataStr.split("/").map(Number);
+
+    // Formato básico
+    if (!dd || !mm || !yyyy || dataStr.length !== 10) return false;
+
+    // Mês válido
+    if (mm < 1 || mm > 12) return false;
+
+    // Dia válido considerando meses e ano bissexto
+    const diasNoMes = new Date(yyyy, mm, 0).getDate();
+    if (dd < 1 || dd > diasNoMes) return false;
+
+    // Impede datas futuras
+    const hoje = new Date();
+    const dataInformada = new Date(yyyy, mm - 1, dd);
+    if (dataInformada > hoje) return false;
+
+    // Impede datas muito antigas (ex: antes de 1900)
+    if (yyyy < 1900) return false;
+
+    return true;
+  }
+
+
   // Ações
-  
+
   async function handleAtualizar() {
     try {
       setErro("");
@@ -133,6 +162,13 @@ if (verificado) {
         setErro("Digite sua senha para confirmar a atualização.");
         return;
       }
+
+      if (!validarDataNascimento(formData.dataNascimento)) {
+        setErroModal("Data de nascimento inválida. Use o formato DD/MM/AAAA e uma data real.");
+        setSalvando(false);
+        return;
+      }
+
 
       const currentAuth = auth;
       const currentUser = auth.currentUser;
@@ -161,84 +197,84 @@ if (verificado) {
         setErro(res.data?.erro || "Erro ao atualizar perfil.");
       }
     } catch (e) {
-  if (e.message.includes("already-exists")) {
-    if (e.message.includes("Telefone")) setErroModal("❌ Telefone já cadastrado.");
-    else if (e.message.includes("CPF")) setErroModal("❌ CPF já cadastrado.");
-    else setErroModal("❌ Já existe um usuário com esses dados.");
-  } else if (e.message.includes("Senha incorreta")) {
-    setErroModal("❌ Senha incorreta. Tente novamente.");
-  } else {
-    setErroModal(e.message || String(e));
-  }
-} finally {
-  setSalvando(false);
-}
-
-
-  }
-
-async function handleAtualizarEmail() {
-  try {
-    setErro("");
-    setMensagem("");
-    setErroModal("");
-    setMensagemModal("");
-    setSalvando(true);
-
-    if (!novoEmail.trim()) {
-      setErroModal("Informe um novo e-mail.");
-      return;
+      if (e.message.includes("already-exists")) {
+        if (e.message.includes("Telefone")) setErroModal("❌ Telefone já cadastrado.");
+        else if (e.message.includes("CPF")) setErroModal("❌ CPF já cadastrado.");
+        else setErroModal("❌ Já existe um usuário com esses dados.");
+      } else if (e.message.includes("Senha incorreta")) {
+        setErroModal("❌ Senha incorreta. Tente novamente.");
+      } else {
+        setErroModal(e.message || String(e));
+      }
+    } finally {
+      setSalvando(false);
     }
 
-    const currentAuth = auth;
-    const currentUser = currentAuth.currentUser;
 
-
-    if (!senha.trim()) {
-      setErroModal("Digite sua senha para confirmar a alteração de e-mail.");
-      return;
-    }
-
-    // Reautentica o usuário
-    const cred = EmailAuthProvider.credential(currentUser.email, senha);
-    await reauthenticateWithCredential(currentUser, cred);
-
-    // Atualiza o e-mail imediatamente
-    await updateEmail(currentUser, novoEmail);
-    await sendEmailVerification(currentUser);
-
-
-    // Atualiza também o Firestore (mantendo consistência)
-    const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario");
-    await atualizar({ email: novoEmail });
-
-    setMensagemModal(
-      "✅ E-mail atualizado com sucesso! Um aviso foi enviado ao e-mail antigo por segurança."
-    );
-
-    await logout();
-
-    setModo(null);
-    setNovoEmail("");
-    await carregarPerfil();
-  } catch (e) {
-    console.error("Erro ao atualizar e-mail:", e);
-    const code = e.code || "";
-    const msg = e.message || "";
-
-    if (code === "auth/email-already-in-use" || msg.includes("already-exists")) {
-      setErroModal("❌ Este e-mail já está em uso por outro usuário.");
-    } else if (code === "auth/requires-recent-login") {
-      setErroModal("⚠️ Sessão expirada. Faça login novamente para alterar o e-mail.");
-    } else if (code === "auth/invalid-email") {
-      setErroModal("❌ E-mail inválido. Verifique o formato e tente novamente.");
-    } else {
-      setErroModal("❌ Erro ao atualizar e-mail. " + (msg || "Tente novamente."));
-    }
-  } finally {
-    setSalvando(false);
   }
-}
+
+  async function handleAtualizarEmail() {
+    try {
+      setErro("");
+      setMensagem("");
+      setErroModal("");
+      setMensagemModal("");
+      setSalvando(true);
+
+      if (!novoEmail.trim()) {
+        setErroModal("Informe um novo e-mail.");
+        return;
+      }
+
+      const currentAuth = auth;
+      const currentUser = currentAuth.currentUser;
+
+
+      if (!senha.trim()) {
+        setErroModal("Digite sua senha para confirmar a alteração de e-mail.");
+        return;
+      }
+
+      // Reautentica o usuário
+      const cred = EmailAuthProvider.credential(currentUser.email, senha);
+      await reauthenticateWithCredential(currentUser, cred);
+
+      // Atualiza o e-mail imediatamente
+      await updateEmail(currentUser, novoEmail);
+      await sendEmailVerification(currentUser);
+
+
+      // Atualiza também o Firestore (mantendo consistência)
+      const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario");
+      await atualizar({ email: novoEmail });
+
+      setMensagemModal(
+        "✅ E-mail atualizado com sucesso! Um aviso foi enviado ao e-mail antigo por segurança."
+      );
+
+      await logout();
+
+      setModo(null);
+      setNovoEmail("");
+      await carregarPerfil();
+    } catch (e) {
+      console.error("Erro ao atualizar e-mail:", e);
+      const code = e.code || "";
+      const msg = e.message || "";
+
+      if (code === "auth/email-already-in-use" || msg.includes("already-exists")) {
+        setErroModal("❌ Este e-mail já está em uso por outro usuário.");
+      } else if (code === "auth/requires-recent-login") {
+        setErroModal("⚠️ Sessão expirada. Faça login novamente para alterar o e-mail.");
+      } else if (code === "auth/invalid-email") {
+        setErroModal("❌ E-mail inválido. Verifique o formato e tente novamente.");
+      } else {
+        setErroModal("❌ Erro ao atualizar e-mail. " + (msg || "Tente novamente."));
+      }
+    } finally {
+      setSalvando(false);
+    }
+  }
 
 
   async function handleExcluirConta() {
@@ -310,10 +346,20 @@ async function handleAtualizarEmail() {
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-5 relative">
-      <h2 className="text-2xl font-bold text-gray-900">Meu Perfil</h2>
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-100 flex items-center justify-center gap-2">
+          <User className="text-yellow-400" size={26} />
+          Meu Perfil
+        </h2>
+        <p className="text-sm text-gray-400 mt-1">
+          Gerencie suas informações pessoais e de acesso
+        </p>
+      </div>
+
+
 
       {/* Card do perfil */}
-      <div className="rounded-md border border-slate-200 p-5 bg-white space-y-3 relative z-10">
+      <div className="rounded-md border border-slate-200 p-5 bg-gray-700 space-y-3 relative z-10">
         {carregandoPerfil ? (
           <div className="animate-pulse space-y-3">
             <div className="h-4 bg-slate-200 rounded w-2/3"></div>
@@ -324,37 +370,52 @@ async function handleAtualizarEmail() {
           </div>
         ) : perfil ? (
           <>
-            <p>
-            <b>Email:</b> {user.email}{" "}
-            {emailVerificado ? (
-              <span className="text-green-600 font-medium ml-2">Verificado</span>
-            ) : (
-              <>
-                <span className="text-red-600 font-medium ml-2">Aguardando verificação</span>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await sendEmailVerification(auth.currentUser);
-                      setMensagem("📩 E-mail de verificação reenviado com sucesso!");
-                    } catch (e) {
-                      setErro("Erro ao reenviar e-mail: " + e.message);
-                    }
-                  }}
-                  className="ml-3 mt-3 bg-blue-500 hover:bg-blue-600 text-white text-xs px-1 py-1"
-                >
-                  Reenviar e-mail de confirmação
-                </Button>
-              </>
-            )}
-          </p>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center text-white gap-x-2 gap-y-1">
+                <Mail className="text-yellow-400 flex-shrink-0" size={18} />
+                <p className="break-all">
+                  <b></b> {user.email}
+                </p>
+                {emailVerificado ? (
+                  <span className="text-green-500 text-sm flex items-center gap-1 flex-shrink-0">
+                    <CheckCircle size={10} /> Verificado
+                  </span>
+                ) : (
+                  <span className="text-red-500 text-sm flex items-center gap-1 flex-shrink-0">
+                    <AlertCircle size={10} /> Não verificado
+                  </span>
+                )}
+              </div>
+
+
+              <div className="flex items-center text-white gap-2">
+                <UserRound className="text-yellow-400" size={18} />
+                <p><b>Nome:</b> {perfil.nome || "(sem nome)"}</p>
+              </div>
+
+              <div className="flex items-center text-white gap-2">
+                <Phone className="text-yellow-400" size={18} />
+                <p><b>Telefone:</b> {perfil.telefone || "(sem telefone)"}</p>
+              </div>
+
+              <div className="flex items-center text-white gap-2">
+                <CreditCard className="text-yellow-400" size={18} />
+                <p><b>CPF:</b> {perfil.cpf || "(não informado)"}</p>
+              </div>
+
+              <div className="flex items-center text-white gap-2">
+                <Calendar className="text-yellow-400" size={18} />
+                <p><b>Nascimento:</b> {formatarDataCompleta(perfil.dataNascimento)}</p>
+              </div>
+              <div className="flex items-center text-white gap-2">
+                <UserRound className="text-yellow-400" size={18} />
+                <p><b>Sexo Biológico:</b> {perfil.sexoBiologico || "(não informado)"}</p>
+              </div>
 
 
 
+            </div>
 
-            <p><b>Nome:</b> {perfil.nome || "(sem nome)"}</p>
-            <p><b>Telefone:</b> {perfil.telefone || "(sem telefone)"}</p>
-            <p><b>CPF:</b> {perfil.cpf || "(não informado)"}</p>
-            <p><b>Data de Nascimento:</b> {formatarDataCompleta(perfil.dataNascimento)}</p>
           </>
         ) : (
           <p className="text-slate-600 mt-2">Nenhum perfil carregado.</p>
@@ -366,51 +427,48 @@ async function handleAtualizarEmail() {
 
       {/* Ações */}
       {!carregandoPerfil && (
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           <Button
-          onClick={() => {
-            setErro("");
-            setMensagem("");
-            setErroModal("");
-            setMensagemModal("");
-            setSenha("");
-
-            // 🩵 Corrige o formato da data antes de abrir o modal
-            if (perfil?.dataNascimento) {
-              const p = perfil.dataNascimento.split(/[\/\-]/);
-              let dd, mm, yyyy;
-              if (p[0]?.length === 4) [yyyy, mm, dd] = p; // se vier como YYYY-MM-DD
-              else [dd, mm, yyyy] = p;
-              setFormData((prev) => ({
-                ...prev,
-                dataNascimento: `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${yyyy}`,
-              }));
-            }
-
-            setModo("atualizar");
-          }}
-          className="bg-gray-500 hover:bg-yellow-400 text-white"
-        >
-          Atualizar dados
-        </Button>
-
-
-          <Button
-          onClick={() => {
-            setErro("");
-            setMensagem("");
-            setErroModal("");
-            setMensagemModal("");
-            setNovoEmail("");
-            setSenha("");
-            setModo("email");
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-gray-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2"
+            onClick={() => {
+              setErro("");
+              setMensagem("");
+              setErroModal("");
+              setMensagemModal("");
+              setSenha("");
+              if (perfil?.dataNascimento) {
+                const p = perfil.dataNascimento.split(/[\/\-]/);
+                let dd, mm, yyyy;
+                if (p[0]?.length === 4) [yyyy, mm, dd] = p;
+                else[dd, mm, yyyy] = p;
+                setFormData((prev) => ({
+                  ...prev,
+                  dataNascimento: `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${yyyy}`,
+                }));
+              }
+              setModo("atualizar");
+            }}
           >
-          Atualizar e-mail
+            <Edit size={18} /> Editar
           </Button>
 
           <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+            onClick={() => {
+              setErro("");
+              setMensagem("");
+              setErroModal("");
+              setMensagemModal("");
+              setNovoEmail("");
+              setSenha("");
+              setModo("email");
+            }}
+          >
+            <Mail size={18} /> Meu e-mail
+          </Button>
+
+          <Button
+            className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
             onClick={() => {
               setErro("");
               setMensagem("");
@@ -420,15 +478,19 @@ async function handleAtualizarEmail() {
               setMostrarSenhaConfirmar(false);
               setModo("excluir");
             }}
-            className="bg-red-600 hover:bg-red-700 text-white"
           >
-            Excluir conta
+            <Trash2 size={18} /> Excluir
           </Button>
-          <Button onClick={logout} className="bg-gray-800 text-white">
-            Sair
+
+          <Button
+            className="bg-gray-800 hover:bg-gray-900 text-white flex items-center justify-center gap-2"
+            onClick={logout}
+          >
+            <LogOut size={18} /> Sair
           </Button>
         </div>
       )}
+
 
       {/* Modal principal */}
       {modo && modo !== "excluido" && (
@@ -441,7 +503,7 @@ async function handleAtualizarEmail() {
             </h3>
 
             {erroModal && (
-            <p className="text-red-600 text-sm mb-2 font-medium text-center">{erroModal}</p>
+              <p className="text-red-600 text-sm mb-2 font-medium text-center">{erroModal}</p>
             )}
             {mensagemModal && (
               <p className="text-green-700 text-sm mb-2 font-medium text-center">
@@ -480,10 +542,23 @@ async function handleAtualizarEmail() {
                     mask="000.000.000-00"
                     placeholder="000.000.000-00"
                     value={formData.cpf}
-                    onAccept={(v) => setFormData({ ...formData, cpf: v })}
-                    className="w-full border border-gray-500 rounded px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    disabled
+                    className="w-full border border-gray-300 bg-gray-100 text-gray-500 rounded px-3 py-2 text-sm mt-1 cursor-not-allowed"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Para alterar o CPF, entre em{" "}
+                    <a
+                      href="https://wa.me/5511965721206"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-gray-700 hover:text-yellow-400"
+                    >
+                      contato
+                    </a>{" "}
+                    com a clínica.
+                  </p>
                 </label>
+
 
                 <label className="block text-sm text-gray-700">
                   Data de Nascimento:
@@ -495,6 +570,34 @@ async function handleAtualizarEmail() {
                     className="w-full border border-gray-500 rounded px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   />
                 </label>
+
+                <label className="block text-sm text-gray-700">
+                  Sexo Biológico:
+                  <div className="relative">
+                    <select
+                      value={formData.sexoBiologico}
+                      onChange={(e) => setFormData({ ...formData, sexoBiologico: e.target.value })}
+                      className="appearance-none w-full border border-gray-500 rounded px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent pr-8"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Prefiro não dizer">Prefiro não dizer</option>
+                    </select>
+
+                    {/* Ícone de seta customizada */}
+                    <svg
+                      className="absolute right-3 top-[15px] w-4 h-4 text-gray-500 pointer-events-none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </label>
+
 
                 <label className="block text-sm text-gray-700 relative">
                   Digite sua senha para confirmar alterações:

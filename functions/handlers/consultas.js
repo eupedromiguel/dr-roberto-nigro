@@ -319,6 +319,8 @@ exports.listarConsultas = onCall(async (request) => {
               nome: p.nome || "Paciente sem nome",
               telefone: p.telefone || "",
               dataNascimento: p.dataNascimento || null,
+              cpf: p.cpf || "",
+              sexoBiologico: p.sexoBiologico || "", 
             };
           } else {
             consulta.paciente = { nome: "Paciente não encontrado" };

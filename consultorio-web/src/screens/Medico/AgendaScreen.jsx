@@ -1,12 +1,14 @@
-// =======================================
-// src/screens/Medico/AgendaScreen.jsx
-// =======================================
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../services/firebase";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import { IMaskInput } from "react-imask";
+import { useAuth } from "../../context/AuthContext";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { useNavigate, useParams } from "react-router-dom";
+
+
 
 // ------------------------------
 // Helpers globais
@@ -33,7 +35,7 @@ function isPastDateTime(dia, hora) {
 }
 
 // ------------------------------
-// Modal simples (Tailwind)
+// Modal simples
 // ------------------------------
 function ConfirmModal({
   open,
@@ -140,6 +142,42 @@ export default function AgendaScreen() {
   const [confirmTargetId, setConfirmTargetId] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [reabrindoId, setReabrindoId] = useState(null);
+  const { uid } = useParams();
+  const { user, role } = useAuth();
+  const medicoId = role === "doctor" ? user?.uid : uid;
+  const [nomeMedico, setNomeMedico] = useState("");
+  const db = getFirestore();
+  const navigate = useNavigate();
+  const [especialidade, setEspecialidade] = useState("");
+
+
+
+
+
+  useEffect(() => {
+    async function carregarNomeMedico() {
+      if (role !== "admin" || !uid) return;
+
+      try {
+        const ref = doc(db, "usuarios", uid);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          const data = snap.data();
+          setNomeMedico(data.nome || "Médico");
+          setEspecialidade(data.especialidade || "");
+        }
+      } catch (e) {
+        console.error("Erro ao buscar médico:", e);
+      }
+    }
+
+    carregarNomeMedico();
+  }, [role, uid, db]);
+
+
+
+
 
   const toastRef = useRef(null);
   const notify = (message, type = "default") => toastRef.current?.push({ message, type });
@@ -158,10 +196,13 @@ export default function AgendaScreen() {
   }
 
   async function carregarSlots() {
+    if (!medicoId) return;
     try {
-      const listarMeusSlots = httpsCallable(functions, "medicos-listarMeusSlots");
-      const res = await listarMeusSlots();
+      const listarSlots = httpsCallable(functions, "medicos-listarMeusSlots");
+      const res = await listarSlots({ medicoId });
       if (res.data?.sucesso) {
+
+
         const normalizados = res.data.slots.map((s) => {
           const partes = s.data.split("-");
           if (partes[0].length !== 4) {
@@ -187,8 +228,10 @@ export default function AgendaScreen() {
   }
 
   useEffect(() => {
+    if (!medicoId) return;
     carregarSlots();
-  }, []);
+  }, [medicoId]);
+
 
   function adicionarDia() {
     if (!novoDia?.trim()) return;
@@ -235,7 +278,7 @@ export default function AgendaScreen() {
     }
     try {
       const criarFn = httpsCallable(functions, "medicos-criarSlot");
-      const res = await criarFn({ data: dia, hora });
+      const res = await criarFn({ medicoId, data: dia, hora });
       if (res.data?.sucesso) {
         notify(`✅ Horário ${hora} adicionado em ${formatarDataCompleta(dia)}.`, "success");
         carregarSlots();
@@ -286,25 +329,66 @@ export default function AgendaScreen() {
           <div className="h-6 bg-slate-300 rounded w-1/3"></div>
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto bg-white shadow rounded-md p-6 space-y-6">
-          <h2 className="text-2xl font-semibold text-gray-950">Minha Agenda</h2>
 
-          {/* Adicionar novo dia */}
-          <div className="flex flex-col md:flex-row gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Novo dia
-              </label>
-              <IMaskInput
-                mask="00/00/0000"
-                value={novoDia}
-                onAccept={(v) => setNovoDia(v)}
-                placeholder="DD/MM/AAAA"
-                className="w-full border border-gray-400 rounded-md px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
-            </div>
-            <Button onClick={adicionarDia}>Adicionar Dia</Button>
-          </div>
+
+        <div className="max-w-4xl mx-auto bg-gray-900 shadow rounded-md p-7 space-y-2">
+
+
+
+          <h2 className="text-2xl font-semibold text-white text-center md:text-left">
+            {role === "doctor" ? "Minha Agenda" : `Agenda de ${nomeMedico}`}
+          </h2>
+
+          {role !== "doctor" && especialidade && (
+            <p className="text-white text-sm mb-2 text-center md:text-left">
+              Especialidade: {especialidade}
+            </p>
+          )}
+
+
+          {/* HEADER — VOLTAR + ADICIONAR DIA */}
+<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6 mt-4">
+
+  {/* Botão Voltar */}
+  {role === "admin" && (
+    <button
+      onClick={() => navigate("/admin/agendas")}
+      className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition w-full md:w-auto"
+    >
+      ← Voltar
+    </button>
+  )}
+
+  {/* Campo + Botão Adicionar Dia */}
+  <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 items-end md:items-center">
+    <div className="w-full sm:w-auto">
+      <IMaskInput
+        mask="00/00/0000"
+        value={novoDia}
+        onAccept={(v) => setNovoDia(v)}
+        placeholder="DD/MM/AAAA"
+        className="w-full border border-gray-400 rounded-md px-3 py-2 bg-gray-50 
+                   focus:outline-none focus:ring-2 focus:ring-yellow-400"
+      />
+    </div>
+
+    <Button
+      className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
+      onClick={adicionarDia}
+    >
+      Adicionar Dia
+    </Button>
+  </div>
+
+</div>
+
+
+          
+
+
+
+
+
 
           {/* Listagem */}
           {diasFuturos.length === 0 ? (
@@ -328,8 +412,8 @@ export default function AgendaScreen() {
                               slot.status === "livre"
                                 ? "text-green-600"
                                 : slot.status === "ocupado"
-                                ? "text-blue-600"
-                                : "text-red-600"
+                                  ? "text-blue-600"
+                                  : "text-red-600"
                             }
                           >
                             {slot.status}
@@ -339,11 +423,10 @@ export default function AgendaScreen() {
                           <button
                             onClick={() => reabrirSlot(slot.id)}
                             disabled={reabrindoId === slot.id}
-                            className={`text-sm flex items-center gap-1 ${
-                              reabrindoId === slot.id
-                                ? "text-gray-400 cursor-not-allowed"
-                                : "text-gray-950 hover:underline"
-                            }`}
+                            className={`text-sm flex items-center gap-1 ${reabrindoId === slot.id
+                              ? "text-gray-400 cursor-not-allowed"
+                              : "text-gray-950 hover:underline"
+                              }`}
                           >
                             {reabrindoId === slot.id && (
                               <svg
@@ -407,7 +490,7 @@ export default function AgendaScreen() {
 }
 
 // ===============================================
-// 🔹 Adicionar Horário (IMaskInput + Tooltip + notify erros)
+// Adicionar Horário (IMaskInput + Tooltip + notify erros)
 // ===============================================
 function AdicionarHorarioButton({ dia, onAdd, notify }) {
   const [hora, setHora] = useState("");
@@ -442,37 +525,37 @@ function AdicionarHorarioButton({ dia, onAdd, notify }) {
       >
         <IMaskInput
           mask="00:00"
-                 value={hora}
-        onAccept={(v) => setHora(v)}
-        placeholder="HH:MM"
-        className="border border-gray-400 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 "
-        required
-      />
-      <button
-        type="submit"
-        disabled={saving}
-        className="text-sm px-3 py-1 border border-gray-950 rounded-md bg-white text-gray-950 hover:bg-yellow-100 transition-all disabled:opacity-60"
-      >
-        {saving ? "Salvando..." : "Salvar"}
-      </button>
-      <button
-        type="button"
-        onClick={() => setShowInput(false)}
-        className="text-sm px-3 py-1 border border-gray-950 rounded-md bg-white text-gray-950 hover:bg-red-100 transition-all"
-      >
-        Cancelar
-      </button>
-    </form>
-  );
+          value={hora}
+          onAccept={(v) => setHora(v)}
+          placeholder="HH:MM"
+          className="border border-gray-400 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 "
+          required
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          className="text-sm px-3 py-1 border border-gray-950 rounded-md bg-white text-gray-950 hover:bg-yellow-100 transition-all disabled:opacity-60"
+        >
+          {saving ? "Salvando..." : "Salvar"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowInput(false)}
+          className="text-sm px-3 py-1 border border-gray-950 rounded-md bg-white text-gray-950 hover:bg-red-100 transition-all"
+        >
+          Cancelar
+        </button>
+      </form>
+    );
 
   return (
     <Button
       type="button"
       onClick={() => setShowInput(true)}
-      className="!text-xs !px-3 !py-1 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-yellow-100"
-      title="Adicionar um horário (formato HH:MM, entre 00:00–23:59, não pode ser no passado)"
+      className="!text-xs !px-3 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-yellow-100 !max-w-[150px] truncate"
     >
-      Adicionar um horário disponível
+      Adicionar horário
     </Button>
+
   );
 }
