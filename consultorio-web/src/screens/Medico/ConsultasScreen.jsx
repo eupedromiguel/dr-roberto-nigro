@@ -129,6 +129,9 @@ export default function ConsultasScreen() {
   const [toastMsg, setToastMsg] = useState("");
   const { uid } = useParams();
   const { user, role } = useAuth();
+  const [modalAvisoConclusao, setModalAvisoConclusao] = useState(false);
+  const [consultaParaConcluir, setConsultaParaConcluir] = useState(null);
+
 
   const medicoId = role === "doctor" ? user?.uid : uid;
 
@@ -338,27 +341,31 @@ export default function ConsultasScreen() {
     setModalAberto(true);
   }
 
-  async function handleConcluir(consultaId) {
+  async function handleConcluir(consultaId, ignorarHorario = false) {
     const consulta = consultas.find((c) => c.id === consultaId);
     if (!consulta) return;
 
-    // Verificação de data/hora
-    try {
-      const [dataStr, horaStr] = consulta.horario.split(" ");
-      const [ano, mes, dia] = dataStr.split("-").map(Number);
-      const [hora, minuto] = horaStr.split(":").map(Number);
-      const dataHoraConsulta = new Date(ano, mes - 1, dia, hora, minuto);
-      const agora = new Date();
+    // Verificação de data/hora — só bloqueia SE ignorarHorario for falso
+    if (!ignorarHorario) {
+      try {
+        const [dataStr, horaStr] = consulta.horario.split(" ");
+        const [ano, mes, dia] = dataStr.split("-").map(Number);
+        const [hora, minuto] = horaStr.split(":").map(Number);
+        const dataHoraConsulta = new Date(ano, mes - 1, dia, hora, minuto);
+        const agora = new Date();
 
-      if (agora < dataHoraConsulta) {
-        showToast("Não é possível concluir uma consulta ou retorno antes do horário agendado.");
-        return;
+        if (agora < dataHoraConsulta) {
+          // Abre modal de aviso
+          setConsultaParaConcluir(consultaId);
+          setModalAvisoConclusao(true);
+          return;
+        }
+      } catch (err) {
+        console.error("Erro ao validar data da consulta:", err);
       }
-    } catch (err) {
-      console.error("Erro ao validar data da consulta:", err);
     }
 
-    // prossegue se a data/hora já passou
+    // Prossegue com a conclusão normalmente
     setLoadingConcluirId(consultaId);
     try {
       const concluir = httpsCallable(functions, "consultas-marcarComoConcluida");
@@ -377,8 +384,11 @@ export default function ConsultasScreen() {
       setErro("Erro ao marcar como concluída.");
     } finally {
       setLoadingConcluirId(null);
+      setModalAvisoConclusao(false);
+      setConsultaParaConcluir(null);
     }
   }
+
 
 
 
@@ -854,6 +864,20 @@ export default function ConsultasScreen() {
                     </p>
                   )}
 
+
+                  {c.categoria && (
+                    <p>
+                      <b>Categoria:</b> {c.categoria}
+                    </p>
+                  )}
+
+                  {c.carteirinha && (
+                    <p>
+                      <b>Carteirinha:</b> {c.carteirinha}
+                    </p>
+                  )}
+
+
                   {c.sintomas && (
                     <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-100">
                       <b>Sintomas / Alergias:</b> {c.sintomas}
@@ -1066,7 +1090,6 @@ export default function ConsultasScreen() {
                 Agendar Retorno
               </h3>
 
-              {/* NOVO ERRO NO MODAL */}
 
               {erro && (
                 <p className="text-red-600 bg-red-50 border border-red-200 p-2 rounded mb-3">
@@ -1269,7 +1292,9 @@ export default function ConsultasScreen() {
               )}
 
               <p className="text-gray-700 mb-5">
-                Deseja realmente marcar este retorno como <b>concluído</b>?
+                ⚠ 
+                <br />
+                Esta ação é irreversível e encerrará definitivamente o atendimento.
               </p>
 
               <div className="flex justify-center gap-3">
@@ -1304,6 +1329,51 @@ export default function ConsultasScreen() {
             </motion.div>
           </motion.div>
         )}
+
+        {/* Modal AVISO Conclusão antes do horário */}
+        {modalAvisoConclusao && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-xl p-6 w-[90%] max-w-sm shadow-2xl text-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Atenção
+              </h3>
+
+              <p className="text-gray-700 mb-5">
+                Esta consulta ainda <b>não atingiu o horário agendado</b>.
+                Deseja realmente marcá-la como <b>concluída agora</b>?
+              </p>
+
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => handleConcluir(consultaParaConcluir, true)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm"
+                >
+                  Confirmar
+                </button>
+
+                <button
+                  onClick={() => setModalAvisoConclusao(false)}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md text-sm"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+
+
       </AnimatePresence>
 
       {/* Toast simples */}

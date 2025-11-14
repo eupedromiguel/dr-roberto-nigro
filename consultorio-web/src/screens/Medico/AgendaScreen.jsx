@@ -352,7 +352,7 @@ export default function AgendaScreen() {
             {/* Botão Voltar */}
             {role === "admin" && (
               <button
-                onClick={() => navigate("/admin/agendas")}
+                onClick={() => navigate("/admin/slots")}
                 className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition w-full md:w-auto"
               >
                 ← Voltar

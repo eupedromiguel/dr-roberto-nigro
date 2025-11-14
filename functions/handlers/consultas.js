@@ -40,9 +40,13 @@ exports.criarConsulta = onCall(async (request) => {
     sintomas,
     tipoAtendimento,
     convenio,
+    categoria,
+    carteirinha,
     tipoConsulta,
     unidade,
   } = request.data || {};
+
+
 
 
   // Validação de médico, slot e horário
@@ -66,6 +70,26 @@ exports.criarConsulta = onCall(async (request) => {
     tipoConsulta === "teleconsulta"
       ? "Atendimento remoto - Teleconsulta"
       : unidade;
+
+
+
+  if (tipoAtendimento === "convenio") {
+    if (!categoria || categoria.trim() === "") {
+      throw new HttpsError("invalid-argument", "Categoria do convênio é obrigatória.");
+    }
+
+    if (!carteirinha || carteirinha.trim() === "") {
+      throw new HttpsError("invalid-argument", "Número da carteirinha é obrigatório.");
+    }
+
+    if (carteirinha.length > 20) {
+      throw new HttpsError("invalid-argument", "A carteirinha deve ter no máximo 20 caracteres.");
+    }
+  }
+
+
+
+
 
 
   try {
@@ -124,14 +148,21 @@ exports.criarConsulta = onCall(async (request) => {
       tipoConsulta: tipoConsulta || "presencial",
       sintomas: sintomas || null,
       tipoAtendimento: tipoAtendimento || "particular",
+
+
       convenio: tipoAtendimento === "convenio" ? convenio || null : null,
+      categoria: tipoAtendimento === "convenio" ? categoria || null : null,
+      carteirinha: tipoAtendimento === "convenio" ? carteirinha || null : null,
+
       unidade: unidadeFinal || "Não informado",
-      valorConsulta,
-      valorteleConsulta,
+      valorConsulta: tipoAtendimento === "particular" ? valorConsulta : null,
+      valorteleConsulta: tipoAtendimento === "particular" ? valorteleConsulta : null,
+
       status: "agendado",
       criadoEm: admin.firestore.FieldValue.serverTimestamp(),
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
+
 
 
     // Atualiza o slot para "ocupado"
@@ -320,7 +351,7 @@ exports.listarConsultas = onCall(async (request) => {
               telefone: p.telefone || "",
               dataNascimento: p.dataNascimento || null,
               cpf: p.cpf || "",
-              sexoBiologico: p.sexoBiologico || "", 
+              sexoBiologico: p.sexoBiologico || "",
             };
           } else {
             consulta.paciente = { nome: "Paciente não encontrado" };

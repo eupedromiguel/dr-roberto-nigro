@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../services/firebase";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
 import Button from "../../components/Button";
 
 export default function ConfirmarAgendamentoScreen() {
@@ -17,6 +17,8 @@ export default function ConfirmarAgendamentoScreen() {
   const [tipoConsulta, setTipoConsulta] = useState("presencial");
   const [convenio, setConvenio] = useState("");
   const [erroConvenio, setErroConvenio] = useState("");
+  const [erroCategoria, setErroCategoria] = useState("");
+  const [erroCarteirinha, setErroCarteirinha] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(true);
@@ -25,6 +27,12 @@ export default function ConfirmarAgendamentoScreen() {
   const [valorteleConsulta, setValorteleConsulta] = useState(null);
   const [unidade, setUnidade] = useState("");
   const [erroUnidade, setErroUnidade] = useState("");
+  const [conveniosDisponiveis, setConveniosDisponiveis] = useState([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
+  const [carteirinha, setCarteirinha] = useState("");
+
+
+
 
   useEffect(() => {
     if (tipoConsulta === "teleconsulta") {
@@ -97,6 +105,9 @@ export default function ConfirmarAgendamentoScreen() {
             setEspecialidade(data.especialidade || "Especialidade não informada");
             setValorConsulta(data.valorConsulta || null);
             setValorteleConsulta(data.valorteleConsulta || null);
+
+            carregarConveniosParaMedico(encontrado.medicoId);
+
           } else {
             setMedicoNome("Médico(a) não encontrado");
             setEspecialidade("(sem especialidade)");
@@ -104,6 +115,7 @@ export default function ConfirmarAgendamentoScreen() {
             setValorteleConsulta(null);
           }
         }
+
 
       } catch (e) {
         console.error("[Confirmar] Erro ao carregar slot:", e);
@@ -116,16 +128,66 @@ export default function ConfirmarAgendamentoScreen() {
     if (slotId) carregarSlot();
   }, [slotId, db]);
 
+
+
+  // CarregarConveniosParaMédico
+
+  async function carregarConveniosParaMedico(medicoId) {
+    const conveniosRef = collection(db, "planos_saude");
+    const conveniosSnap = await getDocs(conveniosRef);
+
+    const listaFinal = [];
+
+    for (const conv of conveniosSnap.docs) {
+      const categoriasRef = collection(db, `planos_saude/${conv.id}/categorias`);
+      const categoriasSnap = await getDocs(categoriasRef);
+
+      const categoriasDoMedico = categoriasSnap.docs
+        .map((c) => ({ id: c.id, ...c.data() }))
+        .filter((cat) => cat.medicos?.includes(medicoId));
+
+      if (categoriasDoMedico.length > 0) {
+        listaFinal.push({
+          id: conv.id,
+          nome: conv.data().nome,
+          categorias: categoriasDoMedico
+        });
+      }
+    }
+
+    setConveniosDisponiveis(listaFinal);
+  }
+
+
   // Confirmar agendamento
   async function handleConfirmar() {
     if (!slot) return;
+    if (tipoAtendimento === "convenio") {
 
-    if (tipoAtendimento === "convenio" && (!convenio || convenio === "")) {
-      setErroConvenio("Por favor, selecione um convênio.");
-      return;
-    } else {
-      setErroConvenio("");
+      if (!convenio) {
+        setErroConvenio("Selecione um convênio.");
+        return;
+      } else {
+        setErroConvenio("");
+      }
+
+      if (!categoriaSelecionada) {
+        setErroCategoria("Selecione a categoria / plano.");
+        return;
+      } else {
+        setErroCategoria("");
+      }
+
+      if (!carteirinha.trim()) {
+        setErroCarteirinha("Informe o número da carteirinha.");
+        return;
+      } else {
+        setErroCarteirinha("");
+      }
+
     }
+
+
 
     if (tipoConsulta !== "teleconsulta" && (!unidade || unidade === "")) {
       setErroUnidade("Por favor, selecione a unidade médica.");
@@ -148,35 +210,48 @@ export default function ConfirmarAgendamentoScreen() {
     setMensagem("");
 
     try {
-      const criarConsulta = httpsCallable(functions, "consultas-criarConsulta");
-      const res = await criarConsulta({
+
+      // Descobrir o convênio selecionado (pelo ID)
+      const convObj = conveniosDisponiveis.find(c => c.id === convenio);
+
+      // Criar o objeto que será enviado ao backend
+      const dadosConsulta = {
         medicoId: slot.medicoId,
         slotId: slot.id,
         horario: `${slot.data} ${slot.hora}`,
         tipoConsulta,
         sintomas: sintomas || "",
         tipoAtendimento,
-        convenio: tipoAtendimento === "convenio" ? convenio : "",
+        convenio: tipoAtendimento === "convenio" ? (convObj?.nome || "") : "",
+        categoria: tipoAtendimento === "convenio" ? categoriaSelecionada : "",
+        carteirinha: tipoAtendimento === "convenio" ? carteirinha : "",
         unidade: unidadeFinal,
-      });
+      };
+
+
+      // Enviar ao Firebase
+      const criarConsulta = httpsCallable(functions, "consultas-criarConsulta");
+      const res = await criarConsulta(dadosConsulta);
 
       const novaConsultaId = res.data?.id;
       setMensagem(res.data?.mensagem || "Consulta agendada com sucesso!");
 
-      // Direciona para a tela de confirmação, passando o ID da consulta
+      // Redirecionar
       setTimeout(() => {
         navigate(`/paciente/consulta-confirmada/${novaConsultaId}`);
       }, 1200);
+
     } catch (e) {
       console.error("[Confirmar] Erro ao confirmar:", e);
       setErro(
-        e?.message?.includes("permission") ?
-          "Você não tem permissão para agendar esta consulta." :
-          "Erro ao confirmar o agendamento. Tente novamente."
+        e?.message?.includes("permission")
+          ? "Você não tem permissão para agendar esta consulta."
+          : "Erro ao confirmar o agendamento. Tente novamente."
       );
     } finally {
       setSalvando(false);
     }
+
   }
 
   if (loading) return <div className="p-6">Carregando informações...</div>;
@@ -362,27 +437,83 @@ export default function ConfirmarAgendamentoScreen() {
       {/* Convênio */}
       {tipoAtendimento === "convenio" && (
         <div className="relative w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1 ">
             Selecione seu convênio
           </label>
 
           <select
-            className={`appearance-none w-full border rounded-md p-2 pr-8 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent ${erroConvenio ? "border-red-500" : "border-gray-300"
-              }`}
+            className={`appearance-none w-full border rounded-md p-2 pr-8 
+    ${erroConvenio ? "border-red-500" : "border-gray-300"} focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent`}
             value={convenio}
             onChange={(e) => {
               setConvenio(e.target.value);
+              setCategoriaSelecionada("");
               setErroConvenio("");
             }}
+
           >
             <option value="">Selecione</option>
-            <option value="Omint">Omint</option>
-            <option value="Bradesco Saúde">Bradesco Saúde</option>
-            <option value="Amil One">Amil One</option>
-            <option value="CarePlus">CarePlus</option>
-            <option value="Amafresp">Amafresp</option>
-            <option value="Mediservice">Mediservice</option>
+
+            {conveniosDisponiveis.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
+              </option>
+            ))}
           </select>
+
+          {convenio && (
+            <div className="mt-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Categoria / Plano
+              </label>
+
+              <select
+                className={`appearance-none w-full border rounded-md p-2 pr-8 
+      ${erroCategoria ? "border-red-500" : "border-gray-300"} 
+      focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent`}
+                value={categoriaSelecionada}
+                onChange={(e) => {
+                  setCategoriaSelecionada(e.target.value);
+                  setErroCategoria("");
+                }}
+              >
+                <option value="">Selecione</option>
+
+                {conveniosDisponiveis
+                  .find((c) => c.id === convenio)
+                  ?.categorias.map((cat) => (
+                    <option key={cat.id} value={cat.nome}>
+                      {cat.nome}
+                    </option>
+                  ))}
+              </select>
+
+              {erroCategoria && (
+                <p className="text-red-600 text-sm mt-1">{erroCategoria}</p>
+              )}
+            </div>
+          )}
+
+
+          {/* Número da carteirinha */}
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Número da carteirinha
+            </label>
+            <input
+              type="text"
+              maxLength={20}
+              className={`w-full border rounded-md p-2 
+    ${erroCarteirinha ? "border-red-500" : "border-gray-300"}
+  focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent`}
+              value={carteirinha}
+              onChange={(e) => setCarteirinha(e.target.value)}
+            />
+
+          </div>
+
+
+
 
           {/* Ícone de seta customizado */}
           <svg
