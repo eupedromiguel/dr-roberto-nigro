@@ -2,12 +2,12 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 
-// 🔹 Inicializa Admin SDK com segurança
+// Inicializa Admin SDK com segurança
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-// 🔹 Lê variáveis de ambiente
+// Lê variáveis de ambiente
 const EMAIL_USER = functions.config().email?.user;
 const EMAIL_PASS = functions.config().email?.pass;
 
@@ -17,14 +17,14 @@ if (!EMAIL_USER || !EMAIL_PASS) {
   );
 }
 
-// 🔹 Configura transporte do Nodemailer
+// Configura transporte do Nodemailer
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: { user: EMAIL_USER, pass: EMAIL_PASS },
 });
 
 // ======================================================
-// 🔸 Envio de e-mail de verificação no cadastro
+// Envio de e-mail de verificação no cadastro
 // ======================================================
 exports.sendVerificationEmail = async (user) => {
   if (!user.email) return;

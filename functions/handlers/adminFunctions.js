@@ -1,9 +1,9 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { admin, db } = require("./firebaseAdmin");
 
-// ==========================
+
 // LISTAR USUÁRIOS
-// ==========================
+
 exports.listarUsuarios = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado.");
@@ -31,9 +31,9 @@ exports.listarUsuarios = onCall(async (request) => {
   }
 });
 
-// ==========================
+
 // DEFINIR PAPEL (role)
-// ==========================
+
 exports.definirRole = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Usuário não autenticado.");
@@ -76,9 +76,9 @@ exports.definirRole = onCall(async (request) => {
   }
 });
 
-// ==========================
+
 // REMOVER USUÁRIO
-// ==========================
+
 exports.removerUsuario = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError(

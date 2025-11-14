@@ -2,7 +2,7 @@ const admin = require("firebase-admin");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall } = require("firebase-functions/v2/https");
 
-// ✅ setGlobalOptions: chame UMA única vez no projeto
+// setGlobalOptions: chame UMA única vez no projeto
 setGlobalOptions({
   region: "southamerica-east1",
   // opcional:
@@ -10,7 +10,7 @@ setGlobalOptions({
   // maxInstances: 10,
 });
 
-// ✅ Admin SDK só uma vez
+// Admin SDK só uma vez
 if (!admin.apps.length) {
   admin.initializeApp();
 }
@@ -28,7 +28,7 @@ exports.consultas = consultas;
 exports.medicos   = medicos;
 exports.admin     = adminMod;
 
-// 🔎 Função de saúde mínima para validar carregamento
+// Função de saúde mínima para validar carregamento
 exports.health = {
   ping: onCall(async () => ({ ok: true, ts: Date.now() })),
 };

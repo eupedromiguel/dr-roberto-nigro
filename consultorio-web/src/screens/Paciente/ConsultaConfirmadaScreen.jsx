@@ -208,7 +208,7 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
 
   const data = formatarDataCompleta(dataConsulta);
 
-  // ⚡ Skeleton
+  // Skeleton
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto p-6 mt-10 space-y-6 animate-pulse">

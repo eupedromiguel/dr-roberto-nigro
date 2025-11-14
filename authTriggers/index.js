@@ -1,15 +1,9 @@
-// Ponto Importante: Atualmente, os triggers de autenticação do Firebase são suportados apenas por Cloud Functions de 1ª Geração. Embora o Firebase esteja avançando para a 2ª Geração, você pode ter funções de 1ª e 2ª Geração coexistindo no mesmo projeto. Para o seu caso, isso significa que você usaria a sintaxe e as bibliotecas da 1ª Geração para esses triggers específicos.
+// Ponto Importante: Atualmente, os triggers de autenticação do Firebase são suportados apenas por Cloud Functions de 1ª Geração. Embora o Firebase esteja avançando para a 2ª Geração, pode ter funções de 1ª e 2ª Geração coexistindo no mesmo projeto. Para esse caso, isso significa que usamos a sintaxe e as bibliotecas da 1ª Geração para esses triggers específicos.
 // =============================================
 // Auth Triggers - Cloud Functions v1 (Node 20)
 // =============================================
-//
-// ✅ Compatível com seu setup atual:
-// - Usa Node 20 (1ª geração)
 // - Usa Admin SDK compartilhado
 // - Não sobrescreve dados vindos do front
-// - Envia e-mail de verificação corretamente
-//
-// =================================================
 
 const functions = require("firebase-functions");
 const { admin, db } = require("./firebaseAdmin");
@@ -18,7 +12,7 @@ const { sendVerificationEmail } = require("./notificacoes");
 const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
 // =========================================================
-// 🔹 onUserCreated
+// onUserCreated
 // =========================================================
 // Dispara automaticamente quando um novo usuário é criado.
 // - Define role "patient"
@@ -34,7 +28,7 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
     // Define custom claim padrão
     await admin.auth().setCustomUserClaims(uid, { role: "patient" });
 
-    // 🔹 Monta documento apenas com campos válidos
+    // Monta documento apenas com campos válidos
     const userDoc = {
       uid,
       role: "patient",
@@ -61,11 +55,11 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
       console.log("ℹ️ Nome ainda não definido (aguardando atualização via front-end).");
     }
 
-    // 🔸 Atualiza o Firestore SEM sobrescrever dados existentes
+    // Atualiza o Firestore SEM sobrescrever dados existentes
     await db.collection("usuarios").doc(uid).set(userDoc, { merge: true });
     console.log(`✅ Documento 'usuarios/${uid}' criado/atualizado com segurança.`);
 
-    // 🔹 Envia e-mail de verificação (apenas se tiver e-mail)
+    // Envia e-mail de verificação (apenas se tiver e-mail)
     if (user.email) {
       try {
         await sendVerificationEmail(user);
@@ -85,7 +79,7 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
 });
 
 // =========================================================
-// 🔹 onUserDelete
+// onUserDelete
 // =========================================================
 // Dispara automaticamente ao deletar um usuário.
 // - Remove documento Firestore

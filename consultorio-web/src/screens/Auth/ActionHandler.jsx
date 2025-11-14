@@ -11,7 +11,7 @@ import { auth } from "../../services/firebase";
 import Button from "../../components/Button";
 
 // -------------------------------------------------------------
-// Essa página gerencia as ações vindas de links do Firebase:
+//   Essa página gerencia as ações vindas de links do Firebase:
 // - verifyEmail   → Verificar e-mail do usuário
 // - resetPassword → Redefinir senha
 // - recoverEmail  → Restaurar e-mail antigo
@@ -85,7 +85,7 @@ export default function ActionHandler() {
             break;
 
           // =====================================================
-          // 🟦 2. Redefinição de senha
+          // 2. Redefinição de senha
           // =====================================================
           case "resetPassword": {
             const emailFromCode = await verifyPasswordResetCode(auth, actionCode);
@@ -95,7 +95,7 @@ export default function ActionHandler() {
           }
 
           // =====================================================
-          // 🟨 3. Recuperação de e-mail
+          // 3. Recuperação de e-mail
           // =====================================================
           case "recoverEmail": {
             const info = await checkActionCode(auth, actionCode);
@@ -110,7 +110,7 @@ export default function ActionHandler() {
           }
 
           // =====================================================
-          // 🚫 4. Ação inválida
+          // 4. Ação inválida
           // =====================================================
           default:
             setStatus("error");
@@ -127,7 +127,7 @@ export default function ActionHandler() {
   }, [mode, actionCode, continueUrl, status]);
 
   // =============================================================
-  // 🔹 Confirmação da nova senha
+  // Confirmação da nova senha
   // =============================================================
   async function handlePasswordConfirm() {
     try {
@@ -141,7 +141,7 @@ export default function ActionHandler() {
   }
 
   // =============================================================
-  // 🔹 Interface visual
+  // Interface visual
   // =============================================================
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-50">

@@ -31,23 +31,25 @@ Embora o Firebase esteja avançando para a 2ª Geração, você pode ter funçõ
 
 **Estrutura** 
 
-firebase-app/                      # Backend (Cloud Functions)
-│   ├── functions/                 # Funções v2
-│   │   ├── index.js               # Entrypoint das v2
-│   │   ├── package.json           # Package das v2
-│   │   ├── handlers/              # Lógica dividida por domínio
-│   │   │   ├── usuarios.js
-│   │   │   ├── medicos.js
-│   │   │   ├── consultas.js
-│   │   │   └── admin.js
-|   |   |   └── notificacoes.js
-|   ├── authTriggers/              # Funções v1
-│   │   ├── index.js               # Entrypoint das v1
-│   │   ├── notificacoes.js        # Trigger onUserCreated para confirmar e-mail
-│   │   ├── package.json           # Package das v2  
-│   │   ├── firebaseAdmin.js
-│   ├── consultorio-web/           # FrontEnd
-|   └── firestore.rules            # Regras do banco de dados
+firebase-app/ # Backend (Cloud Functions)
+├── functions/ # Funções v2
+│ ├── index.js # Entrypoint das v2
+│ ├── package.json # Package das v2
+│ ├── handlers/ # Lógica dividida por domínio
+│ │ ├── usuarios.js
+│ │ ├── medicos.js
+│ │ ├── consultas.js
+│ │ ├── admin.js
+│ │ └── notificacoes.js
+│
+├── authTriggers/ # Funções v1
+│ ├── index.js # Entrypoint das v1
+│ ├── notificacoes.js # Trigger onUserCreated para confirmar e-mail
+│ ├── package.json # Package das v1
+│ ├── firebaseAdmin.js
+│
+├── consultorio-web/ # FrontEnd
+└── firestore.rules # Regras do banco de dados
 
 
 # Funções prontas e testadas :

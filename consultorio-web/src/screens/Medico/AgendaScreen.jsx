@@ -347,47 +347,39 @@ export default function AgendaScreen() {
 
 
           {/* HEADER — VOLTAR + ADICIONAR DIA */}
-<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6 mt-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6 mt-4">
 
-  {/* Botão Voltar */}
-  {role === "admin" && (
-    <button
-      onClick={() => navigate("/admin/agendas")}
-      className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition w-full md:w-auto"
-    >
-      ← Voltar
-    </button>
-  )}
+            {/* Botão Voltar */}
+            {role === "admin" && (
+              <button
+                onClick={() => navigate("/admin/agendas")}
+                className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition w-full md:w-auto"
+              >
+                ← Voltar
+              </button>
+            )}
 
-  {/* Campo + Botão Adicionar Dia */}
-  <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 items-end md:items-center">
-    <div className="w-full sm:w-auto">
-      <IMaskInput
-        mask="00/00/0000"
-        value={novoDia}
-        onAccept={(v) => setNovoDia(v)}
-        placeholder="DD/MM/AAAA"
-        className="w-full border border-gray-400 rounded-md px-3 py-2 bg-gray-50 
+            {/* Campo + Botão Adicionar Dia */}
+            <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 items-end md:items-center">
+              <div className="w-full sm:w-auto">
+                <IMaskInput
+                  mask="00/00/0000"
+                  value={novoDia}
+                  onAccept={(v) => setNovoDia(v)}
+                  placeholder="DD/MM/AAAA"
+                  className="w-full border border-gray-400 rounded-md px-3 py-2 bg-gray-50 
                    focus:outline-none focus:ring-2 focus:ring-yellow-400"
-      />
-    </div>
+                />
+              </div>
 
-    <Button
-      className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
-      onClick={adicionarDia}
-    >
-      Adicionar Dia
-    </Button>
-  </div>
-
-</div>
-
-
-          
-
-
-
-
+              <Button
+                className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
+                onClick={adicionarDia}
+              >
+                Adicionar Dia
+              </Button>
+            </div>
+          </div>
 
 
           {/* Listagem */}

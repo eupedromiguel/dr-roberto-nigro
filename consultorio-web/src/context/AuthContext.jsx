@@ -20,9 +20,9 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // =====================================================
+
   // Tenta buscar o claim "role" com algumas tentativas
-  // =====================================================
+
   async function fetchRoleWithRetries(currentUser, { tries = 6, interval = 400 } = {}) {
     for (let i = 0; i < tries; i++) {
       const tokenResult = await getIdTokenResult(currentUser, true);
@@ -33,9 +33,9 @@ export function AuthProvider({ children }) {
     return null;
   }
 
-  // =====================================================
+
   // Escuta o estado de autenticação (login / logout / refresh)
-  // =====================================================
+
   useEffect(() => {
     const unsub = onIdTokenChanged(auth, async (u) => {
       setLoading(true);
@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
             await u.reload();
             reloadedOnce.current = true;
           } catch (err) {
-            console.warn("⚠️ Falha ao recarregar usuário:", err.message);
+            console.warn("Falha ao recarregar usuário:", err.message);
           }
         }
 
@@ -81,14 +81,14 @@ export function AuthProvider({ children }) {
           // Só sincroniza se o documento existir
           if (snap.exists()) {
             await setDoc(ref, { emailVerificado: true }, { merge: true });
-            console.log("✅ Campo 'emailVerificado' sincronizado no Firestore!");
+            console.log("Campo 'emailVerificado' sincronizado no Firestore!");
           } else {
-            console.warn("⚠️ Documento de usuário ainda não existe, pulando sincronização de emailVerificado.");
+            console.warn("Documento de usuário ainda não existe, pulando sincronização de emailVerificado.");
           }
 
           syncedEmailVerified.current = true;
         } catch (e) {
-          console.warn("⚠️ Falha ao sincronizar emailVerificado:", e.message);
+          console.warn("Falha ao sincronizar emailVerificado:", e.message);
         }
       }
 

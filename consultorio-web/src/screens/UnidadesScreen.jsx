@@ -70,8 +70,8 @@ export default function UnidadesScreen() {
           {/* Dados da unidade */}
           <div>
             <p className="mb-1">{uni.endereco}</p>
-            <p className="font-medium text-white">📞 {uni.telefone}</p>
-            <p className="mb-4 text-white">🕒 {uni.horario}</p>
+            <p className="font-medium text-white">{uni.telefone}</p>
+            <p className="mb-4 text-white">{uni.horario}</p>
 
             {/* Mapa com spinner */}
             <MapWithSpinner src={uni.mapa} />
@@ -91,9 +91,9 @@ export default function UnidadesScreen() {
   );
 }
 
-// =======================================
+
 // Componente com spinner de carregamento do mapa
-// =======================================
+
 function MapWithSpinner({ src }) {
   const [loading, setLoading] = useState(true);
 
@@ -117,9 +117,9 @@ function MapWithSpinner({ src }) {
   );
 }
 
-// =======================================
+
 // SlideShow com spinner e indicadores
-// =======================================
+
 function SlideShow({ slides }) {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);

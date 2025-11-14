@@ -410,7 +410,7 @@ export default function AgendamentosScreen() {
               </div>
             )}
 
-            {/* ⚠️ Aviso para retornos */}
+            {/* Aviso para retornos */}
             {c.status === "retorno" && (
               <div className="mt-3 text-sm bg-orange-50 border border-gray-200 rounded-md p-3 text-gray-700">
                 Se o paciente não puder comparecer ao retorno, favor entrar em contato no{" "}
@@ -426,7 +426,7 @@ export default function AgendamentosScreen() {
               </div>
             )}
 
-            {/* ❌ Botão de Cancelar (desabilitado para retornos) */}
+            {/* Botão de Cancelar (desabilitado para retornos) */}
             <div className="mt-3">
               {c.status === "retorno" ? (
                 <button
