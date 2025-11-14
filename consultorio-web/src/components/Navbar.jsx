@@ -55,7 +55,6 @@ export default function Navbar() {
 
   // Menus públicos
   const publicMenus = [
-    { label: "Unidades", path: "/unidades", icon: MapPin },
     { label: "Entrar", path: "/login", icon: LogIn },
     { label: "Cadastrar-se", path: "/register", icon: UserPlus },
   ];

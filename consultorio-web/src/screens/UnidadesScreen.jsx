@@ -35,7 +35,7 @@ export default function UnidadesScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-800 text-yellow-400">
+    <div className="bg-gray-800 text-yellow-400">
 
       {unidades.map((uni) => (
         <motion.section
@@ -134,7 +134,8 @@ function SlideShow({ slides }) {
   }, [loadedCount, slides.length]);
 
   return (
-    <div className="relative overflow-hidden rounded-xl h-100 w-full">
+    <div className="relative overflow-hidden rounded-xl h-64 md:h-80 lg:h-96 w-full">
+
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800/40">
           <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>

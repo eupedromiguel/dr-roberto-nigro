@@ -118,10 +118,12 @@ export default function HomeScreen() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col text-center text-gray-950 px-4 md:px-0">
+    <div className="rounded-[3rem] md:rounded-[4rem] shadow-xl mt-0 overflow-hidden">
+  <div className="w-full">
 
       {/* CONTAINER PRINCIPAL - SLIM */}
-      <div className="flex-1 rounded-[3rem] md:rounded-[4rem] shadow-xl mt-0 overflow-x-hidden">
+      <div className="rounded-[3rem] md:rounded-[4rem] shadow-xl mt-0">
+
 
         {/* HERO SLIM */}
         <section className="relative w-full bg-gradient-to-b from-gray-950 to-gray-800 text-white py-10 md:py-14 overflow-hidden">
@@ -246,6 +248,7 @@ export default function HomeScreen() {
         <UnidadesScreen></UnidadesScreen>
 
       </div>
+    </div>
     </div>
   );
 }
