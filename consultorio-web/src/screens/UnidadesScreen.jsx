@@ -27,10 +27,7 @@ export default function UnidadesScreen() {
         "Rua Cayowaá, 1071 - 10º Andar Conj. 102/103 - Perdizes, São Paulo - SP",
       telefone: "(11) 3673-2899 / (11) 96338-0861",
       horario: "Seg a Sab: 8h às 17h",
-      slides: [
-        "/unidade-cayowaa-1.png",
-        "/unidade-cayowaa-2.png",
-      ],
+      slides: ["/unidade-cayowaa-1.png", "/unidade-cayowaa-2.png"],
       mapa: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.854716237287!2d-46.68534362467041!3d-23.537727278816014!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce57ef0bba731d%3A0x6631bc338bd55449!2sRua%20Cayowa%C3%A1%2C%201071%20-%20Perdizes%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2005018-001!5e0!3m2!1spt-BR!2sbr!4v1761675089205!5m2!1spt-BR!2sbr",
       mapsLink:
         "https://www.google.com/maps/place/Rua+Cayowa%C3%A1,+1071+-+Perdizes,+S%C3%A3o+Paulo+-+SP",
@@ -38,9 +35,9 @@ export default function UnidadesScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-800 text-white">
+    <div className="min-h-screen bg-gray-900 text-white">
       {/* Cabeçalho */}
-      <section className="text-center py-12 px-6 bg-gray-800 border-b border-gray-200">
+      <section className="text-center py-12 px-6 bg-gray-900 border-gray-200">
         <h1 className="text-4xl font-momo mb-3">Nossas Unidades</h1>
         <p className="max-w-2xl mx-auto text-white">
           Conheça as unidades da Clínica Dr. Roberto Nigro e escolha a mais próxima de você.
@@ -55,11 +52,10 @@ export default function UnidadesScreen() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className={`max-w-6xl mx-auto py-16 px-6 grid md:grid-cols-2 gap-10 items-center ${
-            i % 2 ? "md:flex-row-reverse" : ""
-          }`}
+          className="max-w-6xl mx-auto p-10 md:p-14 grid md:grid-cols-2 gap-12 
+                     bg-gray-800 rounded-3xl border border-gray-700 shadow-xl mt-10"
         >
-          {/* SLIDES com título acima */}
+          {/* SLIDES + título */}
           <div>
             <h2 className="text-2xl md:text-3xl font-semibold mb-5 text-white text-center md:text-left">
               {uni.nome}
@@ -73,7 +69,6 @@ export default function UnidadesScreen() {
             <p className="font-medium text-white">{uni.telefone}</p>
             <p className="mb-4 text-white">{uni.horario}</p>
 
-            {/* Mapa com spinner */}
             <MapWithSpinner src={uni.mapa} />
 
             <a
@@ -91,19 +86,20 @@ export default function UnidadesScreen() {
   );
 }
 
-
-// Componente com spinner de carregamento do mapa
-
+/* ===============================
+   MAPA COM SPINNER AJUSTADO
+================================ */
 function MapWithSpinner({ src }) {
   const [loading, setLoading] = useState(true);
 
   return (
-    <div className="relative w-full h-[250px] mb-3 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="relative w-full h-[250px] mb-3 rounded-xl overflow-hidden border border-gray-700">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/20">
           <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
+
       <iframe
         src={src}
         width="100%"
@@ -117,9 +113,9 @@ function MapWithSpinner({ src }) {
   );
 }
 
-
-// SlideShow com spinner e indicadores
-
+/* ===============================
+   SLIDESHOW AJUSTADO
+================================ */
 function SlideShow({ slides }) {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -132,17 +128,14 @@ function SlideShow({ slides }) {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  // Quando todas as imagens forem carregadas, remove o spinner
   useEffect(() => {
-    if (loadedCount === slides.length) {
-      setLoading(false);
-    }
+    if (loadedCount === slides.length) setLoading(false);
   }, [loadedCount, slides.length]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl shadow-md h-100 w-full">
+    <div className="relative overflow-hidden rounded-xl h-100 w-full shadow-md">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/20">
           <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
@@ -156,11 +149,9 @@ function SlideShow({ slides }) {
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
             i === index ? "opacity-100" : "opacity-0"
           }`}
-          loading="lazy"
         />
       ))}
 
-      {/* Indicadores */}
       <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
         {slides.map((_, i) => (
           <button

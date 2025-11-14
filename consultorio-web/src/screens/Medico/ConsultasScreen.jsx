@@ -136,6 +136,8 @@ export default function ConsultasScreen() {
   const navigate = useNavigate();
   const [nomeMedico, setNomeMedico] = useState("");
   const [especialidadeMedico, setEspecialidadeMedico] = useState("");
+  const [erroUnidade, setErroUnidade] = useState(false);
+
 
   // Se o usuário for admin, busca o nome do médico
   useEffect(() => {
@@ -395,6 +397,13 @@ export default function ConsultasScreen() {
       return;
     }
 
+    if (tipoRetorno === "presencial" && !unidade) {
+      setErro("Selecione uma unidade para o retorno presencial.");
+      setErroUnidade(true);
+      return;
+    }
+
+
     // Validar e converter data (DD/MM/AAAA → YYYY-MM-DD)
     const partes = novaData.split("/");
     if (partes.length !== 3) {
@@ -590,33 +599,33 @@ export default function ConsultasScreen() {
   return (
     <div className="max-w-4xl mx-auto p-6">
 
-{role === "admin" && (
-  <div className="flex items-center justify-between mb-4">
-    <div>
-      {nomeMedico ? (
-        <>
-          <h2 className="text-xl font-semibold text-white">
-            Consultas de {nomeMedico}
-          </h2>
-          <p className="text-sm text-gray-400">{especialidadeMedico}</p>
-        </>
-      ) : (
-        <div className="animate-pulse">
-          <div className="h-5 bg-gray-700 rounded w-40 mb-1"></div>
-          <div className="h-3 bg-gray-700 rounded w-28"></div>
+      {role === "admin" && (
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            {nomeMedico ? (
+              <>
+                <h2 className="text-xl font-semibold text-white">
+                  Consultas de {nomeMedico}
+                </h2>
+                <p className="text-sm text-gray-400">{especialidadeMedico}</p>
+              </>
+            ) : (
+              <div className="animate-pulse">
+                <div className="h-5 bg-gray-700 rounded w-40 mb-1"></div>
+                <div className="h-3 bg-gray-700 rounded w-28"></div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => navigate("/admin/agendas")}
+            className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-4 py-2 rounded-md transition"
+          >
+            ← Voltar
+          </button>
         </div>
       )}
-    </div>
-    <button
-      onClick={() => navigate("/admin/agendas")}
-      className="bg-gray-800 hover:bg-yellow-400 text-white font-medium px-4 py-2 rounded-md transition"
-    >
-      ← Voltar
-    </button>
-  </div>
-)}
 
-      
+
       <h2 className="text-2xl font-semibold text-white mb-4">
         Consultas marcadas
       </h2>
@@ -1077,14 +1086,36 @@ export default function ConsultasScreen() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Retorno
                   </label>
-                  <select
-                    value={tipoRetorno}
-                    onChange={(e) => setTipoRetorno(e.target.value)}
-                    className="border border-gray-300 rounded-md w-full px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  >
-                    <option value="presencial">Presencial</option>
-                    <option value="teleconsulta">Teleconsulta</option>
-                  </select>
+
+                  <div className="relative">
+                    <select
+                      value={tipoRetorno}
+                      onChange={(e) => setTipoRetorno(e.target.value)}
+                      className="appearance-none border border-gray-300 rounded-md w-full px-3 py-2 text-gray-900 
+      focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-8"
+                    >
+                      <option value="presencial">Presencial</option>
+                      <option value="teleconsulta">Teleconsulta</option>
+                    </select>
+
+                    {/* Ícone da seta personalizada */}
+                    <svg
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+
+
                 </div>
 
                 {/* Unidade — aparece apenas se tipo = presencial */}
@@ -1093,15 +1124,45 @@ export default function ConsultasScreen() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Unidade Médica
                     </label>
-                    <select
-                      value={unidade}
-                      onChange={(e) => setUnidade(e.target.value)}
-                      className="border border-gray-300 rounded-md w-full px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                    >
-                      <option value="">Selecione uma unidade</option>
-                      <option value="Unidade Pompéia - Rua Apinajés, 1100 - Conj. 803/804">Unidade Pompéia</option>
-                      <option value="Unidade Cayowaá - Rua Cayowaá, 1071 - 10º Andar Conj. 102/103">Unidade Cayowaá</option>
-                    </select>
+
+                    <div className="relative">
+                      <select
+                        value={unidade}
+                        onChange={(e) => {
+                          setUnidade(e.target.value);
+                          setErroUnidade(false);
+                        }}
+                        className={`appearance-none border rounded-md w-full px-3 py-2 text-gray-900 
+      focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-8
+      ${erroUnidade ? "border-red-500" : "border-gray-300"}`}
+                      >
+                        <option value="">Selecione uma unidade</option>
+                        <option value="Unidade Pompéia - Rua Apinajés, 1100 - Conj. 803/804">
+                          Unidade Pompéia
+                        </option>
+                        <option value="Unidade Cayowaá - Rua Cayowaá, 1071 - 10º Andar Conj. 102/103">
+                          Unidade Cayowaá
+                        </option>
+                      </select>
+
+                      {/* Ícone da seta */}
+                      <svg
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+
+
                   </div>
                 )}
 
@@ -1155,6 +1216,7 @@ export default function ConsultasScreen() {
                 <button
                   onClick={confirmarRetorno}
                   disabled={loadingRetorno}
+
                   className={`${loadingRetorno
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
