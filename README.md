@@ -265,7 +265,6 @@ await criarUsuario({ nome, cpf, telefone });
 | **Framework**               | React e DOM 19.1.1, Vite 7.1.10           |
 | **UI / Estilo**             | Tailwind v4, Framer Motion, Lucide Icons  |
 | **Gerenciamento de Estado** | React Context + Hooks personalizados      |
-|-----------------------------|-------------------------------------------|
 
 # Autenticação e Papéis
 
