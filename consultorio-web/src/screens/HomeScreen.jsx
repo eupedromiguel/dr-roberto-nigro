@@ -152,7 +152,7 @@ export default function HomeScreen() {
             </h2>
 
             <CardCarousel cards={medicos} />
-  
+
           </div>
         </section>
 
@@ -199,9 +199,6 @@ export default function HomeScreen() {
         </section>
 
 
-<UnidadesScreen></UnidadesScreen> 
-
-
         {/* SLIDER FINAL (modern, slim) */}
         <section className="relative w-full bg-gray-800 text-white overflow-hidden pb-16">
           <div className="relative w-full h-[420px] sm:h-[520px] md:h-[600px] lg:h-[650px] overflow-hidden">
@@ -211,9 +208,8 @@ export default function HomeScreen() {
                 src={slide.img}
                 alt={slide.title}
                 loading="lazy"
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                  i === index ? "opacity-70" : "opacity-0"
-                }`}
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === index ? "opacity-70" : "opacity-0"
+                  }`}
               />
             ))}
           </div>
@@ -238,13 +234,16 @@ export default function HomeScreen() {
               <button
                 key={i}
                 onClick={() => setIndex(i)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  i === index ? "bg-yellow-400 scale-125" : "bg-slate-500"
-                }`}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${i === index ? "bg-yellow-400 scale-125" : "bg-slate-500"
+                  }`}
               ></button>
             ))}
+
+
           </div>
         </section>
+
+        <UnidadesScreen></UnidadesScreen>
 
       </div>
     </div>
