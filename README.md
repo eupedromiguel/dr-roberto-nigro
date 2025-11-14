@@ -1,6 +1,13 @@
-# Clínica Dr. Roberto Nigro
+# README -- Clínica Dr. Roberto Nigro
 
-Plataforma de agendamento médico completa, desenvolvida em **Firebase + React + Vite (Ler FronEnd.md após o README)**
+Sistema completo de agendamento médico, desenvolvido com **Firebase**,
+**React** e **Vite**.
+
+Este repositório documenta a arquitetura do backend (Cloud Functions),
+integrações com o Firebase, regras de segurança, papéis de usuário e
+módulos principais da plataforma.\
+*(Consulte o arquivo others **Read-me's/FrontEnd.md** após este README para detalhes da
+interface.)*
 
 **Integração com Firebase** 
 
@@ -29,27 +36,31 @@ Embora o Firebase esteja avançando para a 2ª Geração, você pode ter funçõ
 - Functions 4.8.0 
 - Nodemailer 7.0.10 
 
-**Estrutura** 
+**Estrutura**
 
-firebase-app/          # Backend (Cloud Functions)
-  functions/           # Funções v2
-    index.js           # Entrypoint das v2
-    package.json       # Package das v2
-    handlers/          # Lógica dividida por domínio
-      usuarios.js
-      medicos.js
-      consultas.js
-      admin.js
-      notificacoes.js
+``` txt
+firebase-app/
+├── functions/                 # Funções v2 (Node 22)
+│   ├── index.js               # Entrypoint das v2
+│   ├── package.json
+│   ├── handlers/              # Lógica de domínio
+│   │   ├── usuarios.js
+│   │   ├── medicos.js
+│   │   ├── consultas.js
+│   │   ├── admin.js
+│   │   └── notificacoes.js
+│
+├── authTriggers/              # Funções v1 (Node 18)
+│   ├── index.js               # Entrypoint das v1
+│   ├── notificacoes.js        # Trigger onUserCreated
+│   ├── package.json
+│   ├── firebaseAdmin.js
+│
+├── consultorio-web/           # Front-end (React)
+└── firestore.rules            # Regras de segurança
+```
 
-  authTriggers/        # Funções v1
-    index.js           # Entrypoint das v1
-    notificacoes.js    # Trigger onUserCreated para confirmar e-mail
-    package.json       # Package das v1
-    firebaseAdmin.js
-
-  consultorio-web/
-  firestore.rules
+-------------------------------------------------------------------------------------------------------------------------------
 
 # Funções prontas e testadas :
 
@@ -64,7 +75,7 @@ Funções de **1ª Geração (Node 20)** para eventos do Authentication.
 |--------------------|----------------------------------------------------------------| 
 | **onUserDeleted**  | Remove todos os dados vinculados ao usuário excluído.          |
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-------------------------------------------------------------------------------------------------------------------------------
 
 **Funções v2**
 Funções de **2ª Geração (Node 22)** para eventos OnCall.
@@ -163,13 +174,13 @@ Módulo central para envio de e-mails via **Nodemailer**.
 
 
 **Variáveis de ambiente:**
-```
+
+``` bash
 firebase functions:secrets:set EMAIL_USER
 firebase functions:secrets:set EMAIL_PASS
-
 ```
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-------------------------------------------------------------------------------------------------------------------------------
 
 # Papéis de Usuário (Qualquer usuário pode ver, atualizar os próprios dados e excluir a própria conta)
 
@@ -179,7 +190,7 @@ patient	  Automático ao criar conta	                         Pode agendar, canc
 doctor	  Definido por um admin	                             Pode criar e gerenciar slots, ver perfil, atualizar dados
 admin	  Definido no painel ou via função backend	         Pode listar e alterar roles
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-------------------------------------------------------------------------------------------------------------------------------
 
 # Regras da Firestore (Banco de Dados)
 
@@ -258,7 +269,7 @@ Integridade garantida: campos sensíveis como role, pacienteId e medicoId não p
 
 Admin tem poderes amplos, mas sem permissão de exclusão. (Princípio do menor privilégio)
 
--------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------
 
 # Integração com o Front-end
 O front-end React consome as funções via **Callable Functions**:
