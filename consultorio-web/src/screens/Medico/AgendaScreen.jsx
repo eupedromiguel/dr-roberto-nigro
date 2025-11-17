@@ -149,6 +149,8 @@ export default function AgendaScreen() {
   const db = getFirestore();
   const navigate = useNavigate();
   const [especialidade, setEspecialidade] = useState("");
+  const [showInputDia, setShowInputDia] = useState(false);
+
 
 
 
@@ -234,20 +236,79 @@ export default function AgendaScreen() {
 
 
   function adicionarDia() {
-    if (!novoDia?.trim()) return;
-    let dataFormatada = "";
-    if (novoDia.includes("/")) {
-      const [dd, mm, yyyy] = novoDia.split("/");
-      dataFormatada = `${yyyy}-${mm}-${dd}`;
-    } else {
-      dataFormatada = novoDia;
+    if (!novoDia?.trim()) {
+      notify("Informe uma data.", "error");
+      return false;
     }
-    if (isPastDay(dataFormatada)) return notify("Você não pode adicionar um dia que já passou.", "error");
-    if (diasLocais.includes(dataFormatada)) return notify("Esse dia já foi adicionado.", "error");
-    setDiasLocais((prev) => [...prev, dataFormatada]);
+
+    // Verifica formato DD/MM/AAAA usando regex
+    const regexData = /^([0-3][0-9])\/([0-1][0-9])\/(\d{4})$/;
+    const match = novoDia.match(regexData);
+
+    if (!match) {
+      notify("Formato inválido. Use DD/MM/AAAA.", "error");
+      return false;
+    }
+
+    const [, ddStr, mmStr, yyyyStr] = match;
+    const dd = Number(ddStr);
+    const mm = Number(mmStr);
+    const yyyy = Number(yyyyStr);
+
+    // Valida ranges reais
+    if (dd < 1 || dd > 31) {
+      notify("Dia inválido.", "error");
+      return false;
+    }
+    if (mm < 1 || mm > 12) {
+      notify("Mês inválido.", "error");
+      return false;
+    }
+    if (yyyy < 2020 || yyyy > new Date().getFullYear() + 5) {
+      notify("Ano inválido.", "error");
+      return false;
+    }
+
+    // Confere se a data realmente existe (ex: 31/02 não existe)
+    const dataObj = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+    if (isNaN(dataObj.getTime())) {
+      notify("Data inexistente.", "error");
+      return false;
+    }
+
+    // Confere dia/mês real (Date pode ajustar sozinho)
+    if (
+      dataObj.getFullYear() !== yyyy ||
+      dataObj.getMonth() + 1 !== mm ||
+      dataObj.getDate() !== dd
+    ) {
+      notify("Data inválida.", "error");
+      return false;
+    }
+
+    // Converte para ISO
+    const dataISO = `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+
+    // Bloqueia datas passadas
+    if (dataISO < todayStr()) {
+      notify("Você não pode adicionar um dia que já passou.", "error");
+      return false;
+    }
+
+    // Bloqueia duplicados
+    if (diasLocais.includes(dataISO)) {
+      notify("Esse dia já foi adicionado.", "error");
+      return false;
+    }
+
+    // OK — adiciona dia
+    setDiasLocais((prev) => [...prev, dataISO]);
     setNovoDia("");
-    notify("Dia adicionado à pré-lista. Lembre-se de incluir horários.", "success");
+    notify(`Dia ${novoDia} adicionado com sucesso.`, "success");
+
+    return true;
   }
+
 
   async function reabrirSlot(slotId) {
     setReabrindoId(slotId);
@@ -359,26 +420,58 @@ export default function AgendaScreen() {
               </button>
             )}
 
-            {/* Campo + Botão Adicionar Dia */}
+            {/* ADICIONAR DIA — versão com campo escondido */}
             <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 items-end md:items-center">
-              <div className="w-full sm:w-auto">
-                <IMaskInput
-                  mask="00/00/0000"
-                  value={novoDia}
-                  onAccept={(v) => setNovoDia(v)}
-                  placeholder="DD/MM/AAAA"
-                  className="w-full border border-gray-400 rounded-md px-3 py-2 bg-gray-50 
-                   focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                />
-              </div>
 
-              <Button
-                className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
-                onClick={adicionarDia}
-              >
-                Adicionar Dia
-              </Button>
+              {!showInputDia ? (
+                // BOTÃO: MOSTRAR INPUT
+                <Button
+                  className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
+                  onClick={() => setShowInputDia(true)}
+                >
+                  Adicionar Dia
+                </Button>
+              ) : (
+                // INPUT VISÍVEL APÓS CLICAR
+                <div className="flex flex-col sm:flex-row gap-2 items-end">
+
+                  <IMaskInput
+                    mask="00/00/0000"
+                    value={novoDia}
+                    onAccept={(v) => setNovoDia(v)}
+                    placeholder="DD/MM/AAAA"
+                    className="border border-gray-400 rounded-md px-3 py-2 bg-gray-50 
+                 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  />
+
+                  {/* Botão Salvar */}
+                  <Button
+                    className="!bg-green-600 hover:!bg-green-700 text-white px-4 py-2 rounded-md"
+                    onClick={() => {
+                      const ok = adicionarDia();
+                      if (ok) setShowInputDia(false);
+                    }}
+                  >
+                    Salvar
+                  </Button>
+
+                  {/* Botão Cancelar */}
+                  <Button
+                    className="!bg-gray-300 hover:!bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                    onClick={() => {
+                      setShowInputDia(false);
+                      setNovoDia("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+
+                </div>
+              )}
+
             </div>
+
+
           </div>
 
 
