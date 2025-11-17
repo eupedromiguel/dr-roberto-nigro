@@ -98,7 +98,8 @@ export default function ConfirmarAgendamentoScreen() {
         setSlot(encontrado);
 
         if (encontrado.medicoId) {
-          const medicoSnap = await getDoc(doc(db, "usuarios", encontrado.medicoId));
+          const medicoSnap = await getDoc(doc(db, "medicos_publicos", encontrado.medicoId));
+
           if (medicoSnap.exists()) {
             const data = medicoSnap.data();
             setMedicoNome(data.nome || "Médico(a) sem nome");
@@ -115,6 +116,8 @@ export default function ConfirmarAgendamentoScreen() {
             setValorteleConsulta(null);
           }
         }
+
+
 
 
       } catch (e) {

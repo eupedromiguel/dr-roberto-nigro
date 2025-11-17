@@ -46,8 +46,8 @@ const Toaster = forwardRef(function Toaster(_props, ref) {
     type === "success"
       ? "border-green-400"
       : type === "error"
-      ? "border-red-400"
-      : "border-gray-400";
+        ? "border-red-400"
+        : "border-gray-400";
 
   return (
     <div className="fixed top-20 right-4 z-[120] flex flex-col gap-2">
@@ -86,7 +86,7 @@ export default function AgendarScreen() {
   const [medicoSelecionado, setMedicoSelecionado] = useState(null);
   const [diaSelecionado, setDiaSelecionado] = useState(null);
   const [loadedImages, setLoadedImages] = useState({});
-  const [loadingSlotId, setLoadingSlotId] = useState(null); 
+  const [loadingSlotId, setLoadingSlotId] = useState(null);
   const toastRef = useRef(null);
   const navigate = useNavigate();
   const db = getFirestore();
@@ -105,7 +105,7 @@ export default function AgendarScreen() {
     let yyyy, mm, dd;
     const partes = dataStr.split("-");
     if (partes[0].length === 4) [yyyy, mm, dd] = partes;
-    else [dd, mm, yyyy] = partes;
+    else[dd, mm, yyyy] = partes;
     const dataObj = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
     const diaSemana = dataObj.toLocaleDateString("pt-BR", { weekday: "long" });
     return `${diaSemana}, ${String(dd).padStart(2, "0")}/${String(mm).padStart(
@@ -115,89 +115,90 @@ export default function AgendarScreen() {
   }
 
   // Buscar slots disponíveis
-useEffect(() => {
-  async function verificarEmailECarregar() {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-      await user.reload(); // garante estado atualizado
-      setEmailVerificado(user.emailVerified);
+  useEffect(() => {
+    async function verificarEmailECarregar() {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+        await user.reload(); // garante estado atualizado
+        setEmailVerificado(user.emailVerified);
 
-      if (user.emailVerified && role === "patient") {
-        await carregarSlots();
-      }
-    } catch (e) {
-      console.error("Erro ao verificar e-mail:", e);
-      setErro("Erro ao verificar status do e-mail.");
-    } finally {
-      setVerificandoEmail(false);
-      setLoading(false);
-    }
-  }
-
-  async function carregarSlots() {
-    try {
-      const listarSlots = httpsCallable(functions, "medicos-listarSlotsPublicos");
-      const res = await listarSlots();
-      const allSlots = res.data.slots || [];
-
-      const normalizados = allSlots.map((s) => {
-        const partes = s.data.split("-");
-        if (partes[0].length !== 4) {
-          const [dd, mm, yyyy] = partes;
-          return { ...s, data: `${yyyy}-${mm}-${dd}` };
+        if (user.emailVerified && role === "patient") {
+          await carregarSlots();
         }
-        return s;
-      });
+      } catch (e) {
+        console.error("Erro ao verificar e-mail:", e);
+        setErro("Erro ao verificar status do e-mail.");
+      } finally {
+        setVerificandoEmail(false);
+        setLoading(false);
+      }
+    }
 
-      const ordenados = [...normalizados].sort((a, b) => {
-        const dataA = new Date(a.data);
-        const dataB = new Date(b.data);
-        if (dataA.getTime() !== dataB.getTime()) return dataA - dataB;
-        return a.hora.localeCompare(b.hora);
-      });
+    async function carregarSlots() {
+      try {
+        const listarSlots = httpsCallable(functions, "medicos-listarSlotsPublicos");
+        const res = await listarSlots();
+        const allSlots = res.data.slots || [];
 
-      setSlots(ordenados);
+        const normalizados = allSlots.map((s) => {
+          const partes = s.data.split("-");
+          if (partes[0].length !== 4) {
+            const [dd, mm, yyyy] = partes;
+            return { ...s, data: `${yyyy}-${mm}-${dd}` };
+          }
+          return s;
+        });
 
-      // Busca infos dos médicos
-      const idsUnicos = [...new Set(ordenados.map((s) => s.medicoId))];
-      const info = {};
-      for (const id of idsUnicos) {
-        try {
-          const snap = await getDoc(doc(db, "usuarios", id));
-          if (snap.exists()) {
-            const data = snap.data();
+        const ordenados = [...normalizados].sort((a, b) => {
+          const dataA = new Date(a.data);
+          const dataB = new Date(b.data);
+          if (dataA.getTime() !== dataB.getTime()) return dataA - dataB;
+          return a.hora.localeCompare(b.hora);
+        });
+
+        setSlots(ordenados);
+
+        // Busca infos dos médicos
+        const idsUnicos = [...new Set(ordenados.map((s) => s.medicoId))];
+        const info = {};
+        for (const id of idsUnicos) {
+          try {
+            const snap = await getDoc(doc(db, "medicos_publicos", id));
+
+            if (snap.exists()) {
+              const data = snap.data();
+              info[id] = {
+                nome: data.nome || "Médico(a) sem nome",
+                especialidade: data.especialidade || "(especialidade não informada)",
+                fotoPerfil: data.fotoPerfil || null,
+              };
+            } else {
+              info[id] = {
+                nome: "Médico(a) não encontrado",
+                especialidade: "(sem especialidade)",
+                fotoPerfil: null,
+              };
+            }
+
+          } catch {
             info[id] = {
-              nome: data.nome || "Médico(a) sem nome",
-              especialidade:
-                data.especialidade || "(especialidade não informada)",
-              fotoPerfil: data.fotoPerfil || null,
-            };
-          } else {
-            info[id] = {
-              nome: "Médico(a) não encontrado",
-              especialidade: "(sem especialidade)",
+              nome: "Erro ao carregar",
+              especialidade: "",
               fotoPerfil: null,
             };
           }
-        } catch {
-          info[id] = {
-            nome: "Erro ao carregar",
-            especialidade: "",
-            fotoPerfil: null,
-          };
         }
+        setMedicosInfo(info);
+      } catch (e) {
+        console.error("Erro ao carregar horários:", e);
+        setErro("Erro ao carregar horários disponíveis.");
+        notify("Erro ao carregar horários disponíveis.", "error");
       }
-      setMedicosInfo(info);
-    } catch (e) {
-      console.error("Erro ao carregar horários:", e);
-      setErro("Erro ao carregar horários disponíveis.");
-      notify("Erro ao carregar horários disponíveis.", "error");
     }
-  }
 
-  verificarEmailECarregar();
-}, [role]);
+    verificarEmailECarregar();
+  }, [role]);
 
 
   // Bloqueio: não pode agendar se houver retorno pendente ou consulta ativa com o mesmo médico
@@ -351,11 +352,10 @@ useEffect(() => {
                       src={foto}
                       alt={medico?.nome || "Médico(a)"}
                       onLoad={() => handleImageLoad(medicoId)}
-                      className={`w-full h-full object-cover transition-all duration-700 ease-out ${
-                        isLoaded
+                      className={`w-full h-full object-cover transition-all duration-700 ease-out ${isLoaded
                           ? "opacity-100 blur-0 scale-100"
                           : "opacity-0 blur-md scale-105"
-                      } group-hover:scale-105`}
+                        } group-hover:scale-105`}
                     />
                   </div>
 
@@ -484,11 +484,10 @@ useEffect(() => {
                 <Button
                   onClick={() => handleAgendar(slot)}
                   disabled={loadingSlotId === slot.id}
-                  className={`text-sm bg-gray-950 text-white rounded-full px-4 py-1.5 w-full mt-2 transition-all ${
-                    loadingSlotId === slot.id
+                  className={`text-sm bg-gray-950 text-white rounded-full px-4 py-1.5 w-full mt-2 transition-all ${loadingSlotId === slot.id
                       ? "opacity-70 cursor-not-allowed"
                       : "hover:bg-yellow-400"
-                  }`}
+                    }`}
                 >
                   {loadingSlotId === slot.id ? (
                     <div className="flex items-center justify-center gap-2">

@@ -3,94 +3,108 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // =====================================
-    // USUÁRIOS
+    // USUÁRIOS (dados privados)
     // =====================================
     match /usuarios/{userId} {
 
-      allow read: if request.auth != null
-        && (
-          request.auth.uid == userId
-          || request.auth.token.role == "admin"
-          || resource.data.role == "doctor"
-        );
+      // VISUALIZAÇÃO:
+      // - Admin pode ver tudo
+      // - Usuário só vê seus próprios dados
+      // - Pacientes e visitantes NÃO podem ler docs de médicos aqui
+      allow read: if 
+          (request.auth != null && request.auth.token.role == "admin") ||
+          (request.auth != null && request.auth.uid == userId);
 
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && !("role" in request.resource.data);
+      // CRIAÇÃO DO PRÓPRIO DOCUMENTO
+      allow create: if request.auth != null &&
+                     request.auth.uid == userId &&
+                     !("role" in request.resource.data);
 
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data != null
-        && (
-          !("role" in request.resource.data)
-          || request.resource.data.role == resource.data.role
-        );
+      // ATUALIZAÇÃO: não permitir alterar a role
+      allow update: if request.auth != null &&
+                     request.auth.uid == userId &&
+                     request.resource.data.role == resource.data.role;
 
-      allow delete: if request.auth != null
-        && request.auth.uid == userId;
+      // DELETE: apenas o próprio usuário
+      allow delete: if request.auth != null &&
+                     request.auth.uid == userId;
     }
 
     // =====================================
-    // HORÁRIOS
+    // MÉDICOS PÚBLICOS
+    // =====================================
+    match /medicos_publicos/{id} {
+
+      // Qualquer pessoa pode ver (página pública)
+      allow read: if true;
+
+      // Apenas admin pode escrever
+      allow write: if request.auth != null &&
+                    request.auth.token.role == "admin";
+    }
+
+    // =====================================
+    // HORÁRIOS DOS MÉDICOS
     // =====================================
     match /availability_slots/{slotId} {
-
       allow read: if request.auth != null;
 
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.medicoId
-        && request.auth.token.role == "doctor";
+      allow create: if request.auth != null &&
+                    request.auth.uid == request.resource.data.medicoId &&
+                    request.auth.token.role == "doctor";
 
-      allow update, delete: if request.auth != null
-        && request.auth.uid == resource.data.medicoId
-        && request.auth.token.role == "doctor";
+      allow update, delete: if request.auth != null &&
+                            request.auth.uid == resource.data.medicoId &&
+                            request.auth.token.role == "doctor";
     }
 
     // =====================================
-    // CONSULTAS
+    // CONSULTAS (appointments)
     // =====================================
     match /appointments/{appointmentId} {
 
-      allow create: if request.auth != null
-        && request.auth.uid == request.resource.data.pacienteId
-        && request.auth.token.role == "patient"
-        && (request.resource.data.unidade is string);
+      allow create: if request.auth != null &&
+                     request.auth.uid == request.resource.data.pacienteId &&
+                     request.auth.token.role == "patient" &&
+                     (request.resource.data.unidade is string);
 
-      allow read: if request.auth != null
-        && (
-          request.auth.uid == resource.data.pacienteId ||
-          request.auth.uid == resource.data.medicoId ||
-          request.auth.token.role == "admin"
-        );
+      allow read: if request.auth != null &&
+                  (
+                    request.auth.uid == resource.data.pacienteId ||
+                    request.auth.uid == resource.data.medicoId ||
+                    request.auth.token.role == "admin"
+                  );
 
-      allow update: if request.auth != null
-        && (
-          request.auth.uid == resource.data.pacienteId ||
-          request.auth.uid == resource.data.medicoId
-        )
-        && request.resource.data.pacienteId == resource.data.pacienteId
-        && request.resource.data.medicoId == resource.data.medicoId
-        && request.resource.data.status in [
-          "agendado", "cancelada", "concluida", "retorno"
-        ];
+      allow update: if request.auth != null &&
+                    (
+                      request.auth.uid == resource.data.pacienteId ||
+                      request.auth.uid == resource.data.medicoId
+                    ) &&
+                    request.resource.data.pacienteId == resource.data.pacienteId &&
+                    request.resource.data.medicoId == resource.data.medicoId &&
+                    request.resource.data.status in [
+                        "agendado", "cancelada", "concluida", "retorno"
+                    ];
 
-      allow delete: if request.auth != null
-        && (
-          request.auth.uid == resource.data.pacienteId ||
-          request.auth.uid == resource.data.medicoId
-        );
+      allow delete: if request.auth != null &&
+                    (
+                      request.auth.uid == resource.data.pacienteId ||
+                      request.auth.uid == resource.data.medicoId
+                    );
     }
 
     // =====================================
-    // CONVÊNIOS / PLANOS DE SAÚDE (AGRUPADOS)
+    // CONVÊNIOS / PLANOS DE SAÚDE
     // =====================================
     match /planos_saude/{convenioId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.token.role == "admin";
+      allow read: if true;
+      allow write: if request.auth != null &&
+                    request.auth.token.role == "admin";
 
       match /categorias/{catId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth.token.role == "admin";
+        allow read: if true;
+        allow write: if request.auth != null &&
+                      request.auth.token.role == "admin";
       }
     }
 
@@ -98,9 +112,8 @@ service cloud.firestore {
     // ADMIN GLOBAL (fallback)
     // =====================================
     match /{document=**} {
-      allow read, create, update: if request.auth != null
-        && request.auth.token.role == "admin";
-      // delete proibido
+      allow read, create, update: if request.auth != null &&
+                                   request.auth.token.role == "admin";
     }
   }
 }

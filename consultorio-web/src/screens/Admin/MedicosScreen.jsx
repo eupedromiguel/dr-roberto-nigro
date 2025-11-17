@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getFirestore, collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc, doc, deleteDoc, updateDoc, setDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import Button from "../../components/Button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -67,8 +67,10 @@ export default function MedicosScreen() {
     e.preventDefault();
     try {
       let fotoURL = formData.fotoURL;
+
       if (formData.foto) fotoURL = await handleUpload(formData.foto);
 
+      // Atualiza dados privados do Firestore (/usuarios)
       if (editando) {
         await updateDoc(doc(db, "usuarios", editando), {
           nome: formData.nome,
@@ -77,8 +79,27 @@ export default function MedicosScreen() {
           valorConsulta: formData.valorConsulta || null,
           valorteleConsulta: formData.valorteleConsulta || null,
         });
+
+        // CRIAR / ATUALIZAR DOCUMENTO PÚBLICO
+        await updateDoc(doc(db, "medicos_publicos", editando), {
+          nome: formData.nome,
+          especialidade: formData.especialidade,
+          fotoPerfil: fotoURL,
+          valorConsulta: formData.valorConsulta || null,
+          valorteleConsulta: formData.valorteleConsulta || null,
+        }).catch(async () => {
+          // se o doc ainda não existir, cria
+          await setDoc(doc(db, "medicos_publicos", editando), {
+            nome: formData.nome,
+            especialidade: formData.especialidade,
+            fotoPerfil: fotoURL,
+            valorConsulta: formData.valorConsulta || null,
+            valorteleConsulta: formData.valorteleConsulta || null,
+          });
+        });
       }
 
+      // Resetar form
       setModalAberto(false);
       setEditando(null);
       setFormData({
@@ -90,12 +111,15 @@ export default function MedicosScreen() {
         valorteleConsulta: "",
         novaFotoSelecionada: false,
       });
+
       await carregarMedicos();
+
     } catch (err) {
       console.error(err);
       setErro("Erro ao salvar médico.");
     }
   }
+
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
@@ -141,11 +165,10 @@ export default function MedicosScreen() {
                     src={foto}
                     alt={m.nome}
                     onLoad={() => handleImageLoad(m.id)}
-                    className={`w-full h-full object-cover transition-all duration-700 ease-out ${
-                      isLoaded
+                    className={`w-full h-full object-cover transition-all duration-700 ease-out ${isLoaded
                         ? "opacity-100 blur-0 scale-100"
                         : "opacity-0 blur-md scale-105"
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -194,7 +217,7 @@ export default function MedicosScreen() {
                       className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1 rounded-md"
                     >
                       Editar
-                    </Button>                    
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -224,7 +247,7 @@ export default function MedicosScreen() {
 
               <form onSubmit={handleSalvar} className="space-y-3">
                 <label className="block text-sm">
-                  Nome:
+                  Nome público:
                   <input
                     type="text"
                     value={formData.nome}

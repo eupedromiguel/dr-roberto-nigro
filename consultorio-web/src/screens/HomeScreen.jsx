@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import CardCarousel from "./CardCarousel";
 import UnidadesScreen from "./UnidadesScreen";
+import Especialidades from "./Especialidades"
+import Convenios from "./Convenios"
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -244,6 +246,11 @@ export default function HomeScreen() {
 
           </div>
         </section>
+
+
+        <Especialidades></Especialidades>
+
+        <Convenios></Convenios>
 
         <UnidadesScreen></UnidadesScreen>
 

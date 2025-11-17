@@ -89,19 +89,19 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
     return { data: "—", hora: "—" };
   }
 
-  // Normaliza dados do médico vindos do documento ou carrega do Firestore
   async function preencherMedico(dados) {
-    // Preferências: medicoNome / medicoEspecialidade / medico.{nome,especialidade}
+    // Dados vindos da própria consulta
     if (dados?.medicoNome) setMedico(dados.medicoNome);
     if (dados?.medicoEspecialidade) setEspecialidade(dados.medicoEspecialidade);
 
     if (dados?.medico?.nome) setMedico(dados.medico.nome);
-    if (dados?.medico?.especialidade) setEspecialidade(dados.medico.especialidade);
+    if (dados?.medico?.especialidade)
+      setEspecialidade(dados.medico.especialidade);
 
-    // Se ainda faltar, buscar em usuarios/{medicoId}
+    // Se ainda faltar, buscar em medicos_publicos/{medicoId}
     if ((medico === "Médico(a)" || especialidade === "Especialidade não informada") && dados?.medicoId) {
       try {
-        const mSnap = await getDoc(doc(db, "usuarios", dados.medicoId));
+        const mSnap = await getDoc(doc(db, "medicos_publicos", dados.medicoId));
         if (mSnap.exists()) {
           const m = mSnap.data();
           if (medico === "Médico(a)") setMedico(m?.nome || "Médico(a) sem nome");
@@ -109,10 +109,11 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
             setEspecialidade(m?.especialidade || "Especialidade não informada");
         }
       } catch (e) {
-        // Mantém fallbacks
+        console.warn("Erro ao buscar médico público:", e);
       }
     }
   }
+
 
   // Tenta: 1) pegar appointments/{paramId}; 2) query por slotId == paramId
   useEffect(() => {
@@ -175,10 +176,10 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
         // Unidade
         setUnidade(dados.unidade || "—");
 
-        // Se for particular, buscar o valor do médico
+        // Se for particular, buscar o valor do médico (via coleção pública)
         if (dados.tipoAtendimento === "particular" && dados.medicoId) {
           try {
-            const mSnap = await getDoc(doc(db, "usuarios", dados.medicoId));
+            const mSnap = await getDoc(doc(db, "medicos_publicos", dados.medicoId));
             if (mSnap.exists()) {
               const m = mSnap.data();
               setValorConsulta(m?.valorConsulta || null);
@@ -188,6 +189,7 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
             console.warn("Erro ao buscar valores do médico:", e);
           }
         }
+
 
 
       } catch (e) {

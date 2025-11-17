@@ -3,13 +3,29 @@ import { useState, useEffect } from "react";
 function CardCarousel({ cards }) {
   const [current, setCurrent] = useState(0);
 
-  // autoplay
+  // 👉 Começa em uma posição aleatória
+  useEffect(() => {
+    if (cards.length > 0) {
+      const randomIndex = Math.floor(Math.random() * cards.length);
+      setCurrent(randomIndex);
+    }
+  }, [cards.length]);
+
+  // 👉 Autoplay aleatório
   useEffect(() => {
     const t = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % cards.length);
+      if (cards.length <= 1) return;
+
+      let next;
+      do {
+        next = Math.floor(Math.random() * cards.length);
+      } while (next === current); // evita repetir o mesmo card
+
+      setCurrent(next);
     }, 7000);
+
     return () => clearInterval(t);
-  }, [cards.length]);
+  }, [cards.length, current]);
 
   return (
     <div className="w-full overflow-hidden py-0 pb-1 pt-3">
@@ -39,13 +55,9 @@ function CardCarousel({ cards }) {
                   {card.nome}
                 </h3>
 
-                <p className="text-yellow-500 font-medium">
-                  {card.subtitulo}
-                </p>
+                <p className="text-yellow-500 font-medium">{card.subtitulo}</p>
 
-                <p className="text-gray-700 leading-relaxed">
-                  {card.descricao}
-                </p>
+                <p className="text-gray-700 leading-relaxed">{card.descricao}</p>
 
                 <p className="text-gray-700 whitespace-pre-line">
                   <b>Experiência em:</b>

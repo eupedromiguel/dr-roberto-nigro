@@ -255,194 +255,209 @@ export default function GerenciarPlanos() {
               </div>
 
               {/* Conteúdo expandido */}
-              {isOpen && (
-                <div className="mt-4 border-t border-gray-700 pt-4 animate-fadeIn">
+              <div
+                className={`
+    transition-all duration-300 overflow-hidden
+    ${isOpen
+                    ? "max-h-[2000px] mt-4 pt-4 border-t border-gray-700"
+                    : "max-h-0 mt-0 pt-0 border-transparent"
+                  }
+  `}
+              >
 
-                  {/* Botão remover convênio */}
-                  <Button
-                    className="!text-xs !px-3 !py-2 
+
+                {/* Botão remover convênio */}
+                <Button
+                  className="!text-xs !px-3 !py-2 
                          !bg-red-500 !text-white hover:!bg-red-700 
                          !max-w-[150px] truncate mb-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmMessage(
-                        `Tem certeza que deseja remover o convênio "${conv.nome}" e TODAS as suas categorias?`
-                      );
-                      setConfirmAction(() => () => removerConvenio(conv.id));
-                      setConfirmOpen(true);
-                    }}
-                  >
-                    Remover Convênio
-                  </Button>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmMessage(
+                      `Tem certeza que deseja remover o convênio "${conv.nome}" e TODAS as suas categorias?`
+                    );
+                    setConfirmAction(() => () => removerConvenio(conv.id));
+                    setConfirmOpen(true);
+                  }}
+                >
+                  Remover Convênio
+                </Button>
 
-                  {/* Categorias */}
-                  <p className="font-medium mb-1">Categorias:</p>
+                {/* Categorias */}
+                <p className="font-medium mb-1">Categorias:</p>
 
-                  <ul className="space-y-1">
-                    {conv.categorias.length === 0 && (
-                      <li className="text-sm text-gray-400">
-                        Nenhuma categoria foi adicionada.
-                      </li>
-                    )}
+                <ul className="space-y-1">
+                  {conv.categorias.length === 0 && (
+                    <li className="text-sm text-gray-400">
+                      Nenhuma categoria foi adicionada.
+                    </li>
+                  )}
 
-                    {conv.categorias.map((cat) => {
+                  {conv.categorias.map((cat) => {
 
-                      const isCatOpen = categoriaAberta === cat.id;
+                    const isCatOpen = categoriaAberta === cat.id;
 
-                      return (
-                        <li key={cat.id} className="bg-gray-700 px-3 py-3 rounded space-y-3">
+                    return (
+                      <li key={cat.id} className="bg-gray-700 px-3 py-3 rounded space-y-3">
 
-                          {/* Cabeçalho da categoria */}
-                          <div
-                            className="flex justify-between items-center cursor-pointer"
-                            onClick={() => setCategoriaAberta(isCatOpen ? null : cat.id)}
-                          >
-                            <span className="text-lg">{cat.nome}</span>
+                        {/* Cabeçalho da categoria */}
+                        <div
+                          className="flex justify-between items-center cursor-pointer"
+                          onClick={() => setCategoriaAberta(isCatOpen ? null : cat.id)}
+                        >
+                          <span className="text-lg">{cat.nome}</span>
 
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmMessage(`Deseja remover a categoria "${cat.nome}"?`);
-                                  setConfirmAction(() => () => removerCategoria(conv.id, cat.id));
-                                  setConfirmOpen(true);
-                                }}
-                                className="text-yellow-400 hover:text-yellow-700 text-sm"
-                              >
-                                Remover categoria
-                              </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setConfirmMessage(`Deseja remover a categoria "${cat.nome}"?`);
+                                setConfirmAction(() => () => removerCategoria(conv.id, cat.id));
+                                setConfirmOpen(true);
+                              }}
+                              className="text-yellow-400 hover:text-yellow-700 text-sm"
+                            >
+                              Remover categoria
+                            </button>
 
-                              <span className="text-yellow-400 text-sm">
-                                {isCatOpen ? "▲" : "▼"}
-                              </span>
+                            <span className="text-yellow-400 text-sm">
+                              {isCatOpen ? "▲" : "▼"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* CONTEÚDO EXPANDIDO */}
+                        <div
+                          className={`
+    transition-all duration-300 overflow-hidden
+    ${isCatOpen
+                              ? "max-h-[2000px] mt-3 bg-gray-800 p-3 rounded-md space-y-3"
+                              : "max-h-0 p-0 mt-0"
+                            }
+  `}
+                        >
+
+
+                          <p className="text-sm text-gray-300">Médicos que atendem:</p>
+
+                          {cat.medicos?.length > 0 ? (
+                            <ul className="space-y-1">
+                              {cat.medicos.map((id) => {
+                                const medico = medicos.find((m) => m.id === id);
+
+                                return (
+                                  <li
+                                    key={id}
+                                    className="flex justify-between items-center bg-gray-900 px-2 py-2 rounded"
+                                  >
+                                    <span>{medico?.nome || "(Removido)"}</span>
+
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setConfirmMessage(
+                                          `Deseja remover o médico "${medico?.nome}" da categoria "${cat.nome}"?`
+                                        );
+                                        setConfirmAction(() => () => {
+                                          const novaLista = cat.medicos.filter((m) => m !== id);
+                                          atualizarMedicosCategoria(conv.id, cat.id, novaLista);
+                                        });
+                                        setConfirmOpen(true);
+                                      }}
+                                      className="text-red-400 hover:text-red-200 text-xs"
+                                    >
+                                      Remover médico
+                                    </button>
+
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : (
+                            <p className="text-gray-400 text-sm">Nenhum médico vinculado.</p>
+                          )}
+
+                          {/* Adicionar médico */}
+                          <div className="mt-3">
+                            <p className="text-sm text-gray-300 mb-1">Adicionar médico:</p>
+
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <select
+                                  className="w-full bg-green-500 text-white p-2 rounded border border-gray-600 
+                             appearance-none pr-10 focus:outline-none focus:ring-2 
+                             focus:ring-gray-800 focus:border-gray-800"
+                                  onChange={(e) => {
+                                    const novoId = e.target.value;
+                                    if (!novoId) return;
+
+                                    const novaLista = [...(cat.medicos || []), novoId];
+                                    atualizarMedicosCategoria(conv.id, cat.id, novaLista);
+
+                                    e.target.value = "";
+                                  }}
+                                >
+                                  <option value="">Clique e selecione</option>
+                                  {medicos
+                                    .filter((m) => !cat.medicos?.includes(m.id))
+                                    .map((m) => (
+                                      <option key={m.id} value={m.id}>
+                                        {m.nome}
+                                      </option>
+                                    ))}
+                                </select>
+
+                                {/* seta SVG personalizada */}
+                                <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="w-4 h-4 text-gray-300"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                                  </svg>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
-                          {/* CONTEÚDO EXPANDIDO */}
-                          {isCatOpen && (
-                            <div className="bg-gray-800 p-3 rounded-md space-y-3 animate-fadeIn">
+                        </div>
 
-                              <p className="text-sm text-gray-300">Médicos que atendem:</p>
-
-                              {cat.medicos?.length > 0 ? (
-                                <ul className="space-y-1">
-                                  {cat.medicos.map((id) => {
-                                    const medico = medicos.find((m) => m.id === id);
-
-                                    return (
-                                      <li
-                                        key={id}
-                                        className="flex justify-between items-center bg-gray-900 px-2 py-2 rounded"
-                                      >
-                                        <span>{medico?.nome || "(Removido)"}</span>
-
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setConfirmMessage(
-                                              `Deseja remover o médico "${medico?.nome}" da categoria "${cat.nome}"?`
-                                            );
-                                            setConfirmAction(() => () => {
-                                              const novaLista = cat.medicos.filter((m) => m !== id);
-                                              atualizarMedicosCategoria(conv.id, cat.id, novaLista);
-                                            });
-                                            setConfirmOpen(true);
-                                          }}
-                                          className="text-red-400 hover:text-red-200 text-xs"
-                                        >
-                                          Remover médico
-                                        </button>
-
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              ) : (
-                                <p className="text-gray-400 text-sm">Nenhum médico vinculado.</p>
-                              )}
-
-                              {/* Adicionar médico */}
-                              <div className="mt-3">
-                                <p className="text-sm text-gray-300 mb-1">Adicionar médico:</p>
-
-                                <div className="flex gap-2">
-                                  <div className="relative flex-1">
-                                    <select
-                                      className="w-full bg-green-500 text-white p-2 rounded border border-gray-600 
-                             appearance-none pr-10 focus:outline-none focus:ring-2 
-                             focus:ring-gray-800 focus:border-gray-800"
-                                      onChange={(e) => {
-                                        const novoId = e.target.value;
-                                        if (!novoId) return;
-
-                                        const novaLista = [...(cat.medicos || []), novoId];
-                                        atualizarMedicosCategoria(conv.id, cat.id, novaLista);
-
-                                        e.target.value = "";
-                                      }}
-                                    >
-                                      <option value="">Clique e selecione</option>
-                                      {medicos
-                                        .filter((m) => !cat.medicos?.includes(m.id))
-                                        .map((m) => (
-                                          <option key={m.id} value={m.id}>
-                                            {m.nome}
-                                          </option>
-                                        ))}
-                                    </select>
-
-                                    {/* seta SVG personalizada */}
-                                    <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-                                      <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="w-4 h-4 text-gray-300"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                      >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-                                      </svg>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
+                      </li>
+                    );
+                  })}
 
 
 
 
-                  </ul>
+                </ul>
 
-                  {/* Adicionar categoria */}
-                  <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full">
-                    <input
-                      onKeyDown={(e) => e.key === "Enter" && adicionarCategoria(conv.id)}
-                      type="text"
-                      placeholder="Adicionar categoria"
-                      value={novaCategoria}
-                      onChange={(e) => setNovaCategoria(e.target.value)}
-                      className="w-full px-3 py-2 rounded-md bg-gray-100 text-black 
+                {/* Adicionar categoria */}
+                <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full">
+                  <input
+                    onKeyDown={(e) => e.key === "Enter" && adicionarCategoria(conv.id)}
+                    type="text"
+                    placeholder="Adicionar categoria"
+                    value={novaCategoria}
+                    onChange={(e) => setNovaCategoria(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md bg-gray-100 text-black 
                            focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    />
+                  />
 
-                    <Button
-                      onClick={async () => {
-                        await adicionarCategoria(conv.id);
-                      }}
-                      className="w-full sm:w-auto !bg-green-600 hover:!bg-green-500 !px-4 !py-2 text-sm"
-                    >
-                      Salvar
-                    </Button>
-                  </div>
-
+                  <Button
+                    onClick={async () => {
+                      await adicionarCategoria(conv.id);
+                    }}
+                    className="w-full sm:w-auto !bg-green-600 hover:!bg-green-500 !px-4 !py-2 text-sm"
+                  >
+                    Salvar
+                  </Button>
                 </div>
-              )}
+
+              </div>
             </li>
           );
         })}
