@@ -34,6 +34,7 @@ function isPastDateTime(dia, hora) {
   return dt.getTime() <= agora.getTime();
 }
 
+
 // ------------------------------
 // Modal simples
 // ------------------------------
@@ -130,6 +131,7 @@ const Toaster = forwardRef(function Toaster(_props, ref) {
   );
 });
 
+
 // ===============================================
 // Componente principal
 // ===============================================
@@ -150,8 +152,52 @@ export default function AgendaScreen() {
   const navigate = useNavigate();
   const [especialidade, setEspecialidade] = useState("");
   const [showInputDia, setShowInputDia] = useState(false);
+  const [showGerador, setShowGerador] = useState(false);
+  const [confirmDeleteDayOpen, setConfirmDeleteDayOpen] = useState(false);
+  const [diaParaExcluir, setDiaParaExcluir] = useState(null);
+  const [deletingDay, setDeletingDay] = useState(false);
 
 
+
+async function excluirDiaCompleto(dia) {
+  try {
+    setDeletingDay(true);
+
+    // Todos os slots do dia
+    const slotsDoDia = slots.filter(s => s.data === dia);
+
+    const deletarFn = httpsCallable(functions, "medicos-deletarSlot");
+
+    let ok = 0, fail = 0;
+
+    for (const slot of slotsDoDia) {
+      try {
+        await deletarFn({ slotId: slot.id });
+        ok++;
+      } catch (e) {
+        fail++;
+      }
+    }
+
+    notify(
+      `Dia excluído: ${ok} horários cancelados${fail ? `, ${fail} falharam` : ""}.`,
+      fail ? "error" : "success"
+    );
+
+    setDiasLocais(prev => prev.filter(d => d !== dia));
+
+    // Atualiza agenda
+    await carregarSlots();
+
+  } catch (e) {
+    console.error(e);
+    notify("Erro ao excluir dia completo.", "error");
+  } finally {
+    setDeletingDay(false);
+    setConfirmDeleteDayOpen(false);
+    setDiaParaExcluir(null);
+  }
+}
 
 
 
@@ -350,6 +396,40 @@ export default function AgendaScreen() {
     }
   }
 
+
+  async function criarVariosSlots(lista) {
+    try {
+      const criarFn = httpsCallable(functions, "medicos-criarSlot");
+      let okCount = 0;
+      let failCount = 0;
+
+      for (const item of lista) {
+        try {
+          await criarFn({
+            medicoId,
+            data: item.data,
+            hora: item.hora
+          });
+          okCount++;
+        } catch (e) {
+          failCount++;
+          console.warn("Falhou:", item.data, item.hora);
+        }
+      }
+
+      notify(`${okCount} horários criados. ${failCount > 0 ? failCount + " falharam." : ""}`, "success");
+
+      carregarSlots();
+      setShowGerador(false);
+
+    } catch (err) {
+      console.error(err);
+      notify("Erro ao gerar múltiplos horários.", "error");
+    }
+  }
+
+
+
   async function deletarSlotConfirmado() {
     try {
       setConfirmLoading(true);
@@ -423,13 +503,22 @@ export default function AgendaScreen() {
             {/* ADICIONAR DIA — versão com campo escondido */}
             <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 items-end md:items-center">
 
+              <Button
+                className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
+                onClick={() => setShowGerador(true)}
+              >
+                Gerar vários horários
+              </Button>
+
+
+
               {!showInputDia ? (
                 // BOTÃO: MOSTRAR INPUT
                 <Button
                   className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
                   onClick={() => setShowInputDia(true)}
                 >
-                  Adicionar Dia
+                  Adicionar dia
                 </Button>
               ) : (
                 // INPUT VISÍVEL APÓS CLICAR
@@ -481,10 +570,39 @@ export default function AgendaScreen() {
           ) : (
             diasFuturos.map((dia) => (
               <div key={dia} className="border rounded-md p-4 bg-gray-50">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-semibold text-gray-700">📅 {formatarDataCompleta(dia)}</h3>
-                  <AdicionarHorarioButton dia={dia} onAdd={adicionarHorario} notify={notify} />
-                </div>
+
+
+                
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
+
+  {/* Título da data */}
+  <h3 className="font-semibold text-gray-700">
+    📅 {formatarDataCompleta(dia)}
+  </h3>
+
+  <div className="flex items-center gap-3">
+    {/* Botão adicionar horário */}
+    <AdicionarHorarioButton
+      dia={dia}
+      onAdd={adicionarHorario}
+      notify={notify}
+    />
+
+    {/* Botão EXCLUIR DIA */}
+    <Button
+  type="button"
+  onClick={() => {
+    setDiaParaExcluir(dia);
+    setConfirmDeleteDayOpen(true);
+  }}
+  className="!text-xs !px-3 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-red-100 !max-w-[150px] truncate"
+>
+  Excluir dia
+</Button>
+
+  </div>
+</div>
+
 
                 <ul className="divide-y">
                   {slotsPorData[dia]?.length ? (
@@ -560,6 +678,27 @@ export default function AgendaScreen() {
         </div>
       )}
 
+      <GerarSlotsModal
+        open={showGerador}
+        onClose={() => setShowGerador(false)}
+        onGenerate={criarVariosSlots}
+      />
+
+
+     
+      <ConfirmModal
+        open={confirmDeleteDayOpen}
+        title="Excluir dia inteiro"
+        message="Tem certeza? Todos os horários deste dia serão cancelados (livres e ocupados)."
+        confirmText="Excluir dia"
+        cancelText="Voltar"
+        loading={deletingDay}
+        onConfirm={() => excluirDiaCompleto(diaParaExcluir)}
+        onClose={() => !deletingDay && setConfirmDeleteDayOpen(false)}
+      />
+
+
+
       <ConfirmModal
         open={confirmOpen}
         title="Cancelar horário"
@@ -570,6 +709,9 @@ export default function AgendaScreen() {
         onClose={() => !confirmLoading && setConfirmOpen(false)}
         loading={confirmLoading}
       />
+
+
+
     </>
   );
 }
@@ -648,10 +790,231 @@ function AdicionarHorarioButton({ dia, onAdd, notify }) {
     <Button
       type="button"
       onClick={() => setShowInput(true)}
-      className="!text-xs !px-3 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-yellow-100 !max-w-[150px] truncate"
+      className="!text-xs !px-5 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-yellow-100 whitespace-nowrap flex-shrink"
     >
-      Adicionar horário
+      Adicionar Horário
     </Button>
+    
 
   );
 }
+
+function GerarSlotsModal({
+  open,
+  onClose,
+  onGenerate
+}) {
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [horaInicio, setHoraInicio] = useState("08:00");
+  const [horaFim, setHoraFim] = useState("18:00");
+  const [intervalo, setIntervalo] = useState(60); // minutos
+  const [creating, setCreating] = useState(false);
+  const [diasSemana, setDiasSemana] = useState
+    ({
+      dom: false,
+      seg: true,
+      ter: true,
+      qua: true,
+      qui: true,
+      sex: true,
+      sab: false
+    });
+  const [preview, setPreview] = useState([]);
+
+  if (!open) return null;
+
+  function gerarPreview() {
+    const resultado = [];
+
+    const dtInicio = new Date(dataInicio);
+    const dtFim = new Date(dataFim);
+
+    if (isNaN(dtInicio) || isNaN(dtFim) || dtFim < dtInicio) {
+      alert("Período inválido");
+      return;
+    }
+
+    const diasSemanaMap = {
+      0: "dom",
+      1: "seg",
+      2: "ter",
+      3: "qua",
+      4: "qui",
+      5: "sex",
+      6: "sab"
+    };
+
+    const cursor = new Date(dtInicio);
+
+    while (cursor <= dtFim) {
+      const nomeDia = diasSemanaMap[cursor.getDay()];
+
+      if (diasSemana[nomeDia]) {
+        // gerando horários do dia
+        let horaAtual = horaInicio;
+
+        while (horaAtual <= horaFim) {
+          resultado.push({
+            data: cursor.toISOString().slice(0, 10), // yyyy-mm-dd
+            hora: horaAtual
+          });
+
+          // avança intervalo
+          const [H, M] = horaAtual.split(":").map(Number);
+          const next = new Date(cursor);
+          next.setHours(H, M + intervalo, 0, 0);
+          horaAtual = `${String(next.getHours()).padStart(2, "0")}:${String(next.getMinutes()).padStart(2, "0")}`;
+        }
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    setPreview(resultado);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => !creating && onClose()}
+      />
+
+
+      <div className="relative bg-white w-[95%] max-w-2xl rounded-xl p-6 shadow-xl space-y-4 z-[201]">
+
+        <h2 className="text-xl font-semibold">Gerar Vários Horários</h2>
+
+        {/* PERÍODO */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium">Data início:</p>
+            <input type="date" value={dataInicio} onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full border px-2 py-1 rounded" />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium">Data fim:</p>
+            <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)}
+              className="w-full border px-2 py-1 rounded" />
+          </div>
+        </div>
+
+        {/* DIAS DA SEMANA */}
+        <div>
+          <p className="text-sm font-medium mb-1">Dias da semana:</p>
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {Object.keys(diasSemana).map((d) => (
+              <button
+                key={d}
+                className={`px-2 py-1 border rounded text-sm 
+                  ${diasSemana[d] ? "bg-yellow-400 text-black" : "bg-gray-200"}`}
+                onClick={() =>
+                  setDiasSemana((prev) => ({ ...prev, [d]: !prev[d] }))
+                }
+              >
+                {d.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* HORÁRIOS */}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-sm font-medium">Hora início:</p>
+            <input type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)}
+              className="w-full border px-2 py-1 rounded" />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium">Hora fim:</p>
+            <input type="time" value={horaFim} onChange={(e) => setHoraFim(e.target.value)}
+              className="w-full border px-2 py-1 rounded" />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium">Intervalo (min):</p>
+            <input type="number" min="5" value={intervalo}
+              onChange={(e) => setIntervalo(Number(e.target.value))}
+              className="w-full border px-2 py-1 rounded" />
+          </div>
+        </div>
+
+        {/* BOTÃO PREVIEW */}
+        <button
+          onClick={gerarPreview}
+          className="w-full bg-gray-900 text-white py-2 rounded hover:bg-yellow-500 transition"
+        >
+          Gerar pré-visualização
+        </button>
+
+        {/* LISTA DE PREVIEW */}
+        {preview.length > 0 && (
+          <div className="max-h-48 overflow-y-auto border p-3 rounded bg-gray-50">
+            <p className="text-sm font-medium mb-2">{preview.length} horários gerados:</p>
+
+            <ul className="text-sm divide-y">
+              {preview.map((p, i) => (
+                <li key={i} className="py-1">
+                  {p.data.split("-").reverse().join("/")} — {p.hora}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* BOTÕES FINAIS */}
+        <div className="flex justify-end gap-3">
+          <button
+            className="px-4 py-2 bg-gray-300 rounded"
+            onClick={() => !creating && onClose()}
+            disabled={creating}
+          >
+            Cancelar
+          </button>
+
+
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded flex items-center gap-2"
+            disabled={preview.length === 0 || creating}
+            onClick={async () => {
+              setCreating(true);
+              await onGenerate(preview);
+              setCreating(false);
+            }}
+          >
+            {creating && (
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 000 16v-4l3 3-3 3v-4a8 8 0 01-8-8z"
+                ></path>
+              </svg>
+            )}
+
+            {creating ? "Criando horários..." : "Confirmar criação"}
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
