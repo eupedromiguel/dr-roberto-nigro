@@ -487,83 +487,129 @@ exports.agendarRetorno = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "Usuário não autenticado.");
   }
 
-  const { consultaId, novaData, novoHorario, observacoes, tipoRetorno, unidade } =
+  const { consultaId, slotId, observacoes, tipoRetorno, unidade } =
     request.data || {};
 
-  if (!consultaId || !novaData || !novoHorario || !tipoRetorno) {
+  // Validação básica
+  if (!consultaId || !slotId || !tipoRetorno) {
     throw new HttpsError(
       "invalid-argument",
-      "Campos obrigatórios ausentes (consultaId, novaData, novoHorario, tipoRetorno)."
+      "Campos obrigatórios ausentes (consultaId, slotId, tipoRetorno)."
     );
   }
 
-  // Validação de unidade — obrigatória se presencial
-  if (tipoRetorno === "presencial" && (!unidade || unidade.trim() === "")) {
+  // Buscar consulta original
+  const consultaRef = db.collection("appointments").doc(consultaId);
+  const consultaSnap = await consultaRef.get();
+
+  if (!consultaSnap.exists)
+    throw new HttpsError("not-found", "Consulta não encontrada.");
+
+  const consulta = consultaSnap.data();
+  const uid = request.auth.uid;
+  const role = request.auth.token.role;
+
+  // Validação: médico correto
+  if (consulta.medicoId !== uid && role !== "admin") {
     throw new HttpsError(
-      "invalid-argument",
-      "A unidade médica é obrigatória para retornos presenciais."
+      "permission-denied",
+      "Apenas o médico responsável pode agendar/remarcar o retorno."
     );
   }
 
-  const unidadeFinal =
-    tipoRetorno === "teleconsulta"
-      ? "Atendimento remoto - Teleconsulta"
-      : unidade;
+  const medicoId = consulta.medicoId;
+  const pacienteId = consulta.pacienteId;
 
-  try {
-    const consultaRef = db.collection("appointments").doc(consultaId);
-    const snap = await consultaRef.get();
+  // Buscar slot
+  const slotRef = db.collection("availability_slots").doc(slotId);
+  const slotSnap = await slotRef.get();
 
-    if (!snap.exists) throw new HttpsError("not-found", "Consulta não encontrada.");
+  if (!slotSnap.exists) {
+    throw new HttpsError("not-found", "Slot não encontrado.");
+  }
 
-    const consulta = snap.data();
-    const uid = request.auth.uid;
-    const role = request.auth.token.role;
+  const slot = slotSnap.data();
 
-    if (consulta.medicoId !== uid && role !== "admin") {
-      throw new HttpsError(
-        "permission-denied",
-        "Apenas o médico responsável ou um administrador podem agendar o retorno."
-      );
-    }
+  // Slot deve pertencer ao mesmo médico
+  if (slot.medicoId !== medicoId) {
+    throw new HttpsError(
+      "permission-denied",
+      "Este horário pertence a outro médico."
+    );
+  }
 
+  // Proibir slot no passado
+  const agora = new Date();
+  const slotDate = new Date(`${slot.data}T${slot.hora}:00`);
 
-    const retornoRef = consultaRef.collection("retorno");
-    const retornoSnap = await retornoRef.limit(1).get();
+  if (slotDate <= agora) {
+    throw new HttpsError("failed-precondition", "O horário já passou.");
+  }
 
-    const payload = {
-      novaData,
-      novoHorario,
-      observacoes: observacoes || null,
-      tipoRetorno,
-      unidade: unidadeFinal,
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
-    };
+  // Slot deve estar livre
+  if (slot.status !== "livre") {
+    throw new HttpsError("already-exists", "O horário já está ocupado.");
+  }
 
-    if (!retornoSnap.empty) {
-      // Atualiza o retorno existente
-      const docId = retornoSnap.docs[0].id;
-      await retornoRef.doc(docId).update(payload);
-    } else {
-      // Cria novo retorno
-      await retornoRef.add({
-        ...payload,
-        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  // Verificar se paciente já tem retorno
+  const retornoSnap = await consultaRef.collection("retorno").limit(1).get();
+  let retornoDocId = null;
+
+  if (!retornoSnap.empty) {
+    retornoDocId = retornoSnap.docs[0].id;
+  }
+
+  // 1. Liberar slot antigo, se houver
+  if (consulta.slotRetorno) {
+    await db
+      .collection("availability_slots")
+      .doc(consulta.slotRetorno)
+      .update({
+        status: "livre",
+        appointmentId: null,
+        atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
       });
-    }
-
-    // Atualiza status da consulta principal
-    await consultaRef.update({
-      status: "retorno",
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    console.log(`🔵 Retorno salvo para consulta ${consultaId}. Tipo: ${tipoRetorno}`);
-    return { sucesso: true, mensagem: "Retorno agendado com sucesso." };
-  } catch (error) {
-    console.error("Erro ao agendar retorno:", error);
-    throw new HttpsError("internal", "Erro ao agendar o retorno.", error.message);
   }
+
+  // 2. Ocupar o novo slot
+  await slotRef.update({
+    status: "ocupado",
+    appointmentId: consultaId,
+    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // 3. Atualizar subcoleção "retorno"
+  const payload = {
+    novaData: slot.data,
+    novoHorario: slot.hora,
+    tipoRetorno,
+    unidade: tipoRetorno === "teleconsulta"
+      ? "Atendimento remoto - Teleconsulta"
+      : unidade,
+    observacoes: observacoes || null,
+    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (retornoDocId) {
+    await consultaRef.collection("retorno").doc(retornoDocId).update(payload);
+  } else {
+    await consultaRef.collection("retorno").add({
+      ...payload,
+      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  // 4. Atualizar a consulta principal
+  await consultaRef.update({
+    status: "retorno",
+    slotRetorno: slotId,
+    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    sucesso: true,
+    mensagem: "Retorno agendado com sucesso.",
+  };
 });
 
 

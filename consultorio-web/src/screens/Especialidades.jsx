@@ -63,7 +63,7 @@ export default function EspecialidadesPage() {
     <div className="min-h-screen bg-gray-800 py-16 px-4">
       {/* Título */}
       <div className="max-w-4xl mx-auto text-center mb-16">
-        <h1 className="text-4xl md:text-5xl font-bold text-yellow-400 mb-4">
+        <h1 className="text-4xl md:text-3xl font-momo text-yellow-400 mb-4">
           Especialidades & Tratamentos
         </h1>
         <p className="text-white text-lg">

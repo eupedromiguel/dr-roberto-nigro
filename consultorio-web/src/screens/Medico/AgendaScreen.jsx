@@ -269,11 +269,11 @@ export default function AgendaScreen() {
   async function adicionarHorario(dia, hora) {
     if (!hora) return;
     if (hora < "00:00" || hora > "23:59") {
-      notify("⛔ O horário deve estar entre 00:00 e 23:59.", "error");
+      notify("O horário deve estar entre 00:00 e 23:59.", "error");
       return;
     }
     if (isPastDateTime(dia, hora)) {
-      notify("⚠️ Você não pode adicionar um horário no passado.", "error");
+      notify("Você não pode adicionar um horário no passado.", "error");
       return;
     }
     try {
@@ -481,9 +481,8 @@ export default function AgendaScreen() {
   );
 }
 
-// ===============================================
-// Adicionar Horário (IMaskInput + Tooltip + notify erros)
-// ===============================================
+// Adicionar Horário 
+
 function AdicionarHorarioButton({ dia, onAdd, notify }) {
   const [hora, setHora] = useState("");
   const [showInput, setShowInput] = useState(false);
@@ -491,13 +490,24 @@ function AdicionarHorarioButton({ dia, onAdd, notify }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!hora) return;
-    if (hora < "00:00" || hora > "23:59") {
-      notify("⛔ O horário deve estar entre 00:00 e 23:59.", "error");
+
+
+    const regexHora = /^[0-2][0-9]:[0-5][0-9]$/;
+
+    if (!regexHora.test(hora)) {
+      notify("Formato inválido. Use HH:MM (ex: 09:30).", "error");
       return;
     }
+
+
+    const [H, M] = hora.split(":").map(Number);
+    if (H > 23 || M > 59) {
+      notify("Horário inválido. Máximo permitido é 23:59.", "error");
+      return;
+    }
+
     if (dia === todayStr() && hora <= nowTimeStr()) {
-      notify("⚠️ Não é possível adicionar horário no passado.", "error");
+      notify("Não é possível adicionar horário no passado.", "error");
       return;
     }
 
@@ -507,6 +517,7 @@ function AdicionarHorarioButton({ dia, onAdd, notify }) {
     setHora("");
     setShowInput(false);
   };
+
 
   if (showInput)
     return (

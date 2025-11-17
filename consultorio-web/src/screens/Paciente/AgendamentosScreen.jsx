@@ -167,7 +167,7 @@ export default function AgendamentosScreen() {
       const info = {};
       for (const id of ids) {
         try {
-          const snap = await getDoc(doc(db, "usuarios", id));
+          const snap = await getDoc(doc(db, "medicos_publicos", id));
           if (snap.exists()) {
             const data = snap.data();
             info[id] = {
@@ -339,12 +339,27 @@ export default function AgendamentosScreen() {
               </p>
             )}
 
-            {/* Convênio */}
-            {c.tipoAtendimento === "convenio" && c.convenio && (
-              <p className="text-sm text-gray-700 ml-0 mt-0.5">
-                <b>Convênio:</b> {c.convenio}
-              </p>
-            )}
+{/* Convênio */}
+{c.tipoAtendimento === "convenio" && (
+  <>
+    <p className="text-sm text-gray-700 ml-0">
+      <b>Convênio:</b> {c.convenio}
+    </p>
+
+    {c.categoria && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Categoria:</b> {c.categoria}
+      </p>
+    )}
+
+    {c.carteirinha && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Nº da carteirinha:</b> {c.carteirinha}
+      </p>
+    )}
+  </>
+)}
+
 
             {/* Valores */}
             {c.tipoAtendimento === "particular" && (
@@ -377,7 +392,7 @@ export default function AgendamentosScreen() {
               </span>
             </p>
 
-            {/* 🔁 Detalhes do Retorno */}
+            {/* Detalhes do Retorno */}
             {c.status === "retorno" && c.retornoAgendado && (
               <div className="mt-3 p-3 bg-yellow-50 border border-gray-200 rounded-lg text-sm text-blue-900">
                 <p className="font-medium mb-1">📋 <b>Detalhes do Retorno</b></p>
@@ -529,12 +544,27 @@ export default function AgendamentosScreen() {
                     </p>
                   )}
 
-                  {/* Convênio */}
-                  {c.tipoAtendimento === "convenio" && c.convenio && (
-                    <p className="text-sm text-gray-700 ml-0 mt-0.5">
-                      <b>Convênio:</b> {c.convenio}
-                    </p>
-                  )}
+{/* Convênio */}
+{c.tipoAtendimento === "convenio" && (
+  <>
+    <p className="text-sm text-gray-700 ml-0">
+      <b>Convênio:</b> {c.convenio}
+    </p>
+
+    {c.categoria && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Categoria:</b> {c.categoria}
+      </p>
+    )}
+
+    {c.carteirinha && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Nº da carteirinha:</b> {c.carteirinha}
+      </p>
+    )}
+  </>
+)}
+
 
                   {/* Valores */}
                   {c.tipoAtendimento === "particular" && (
@@ -670,11 +700,27 @@ export default function AgendamentosScreen() {
                     </p>
                   )}
 
-                  {c.tipoAtendimento === "convenio" && c.convenio && (
-                    <p className="text-sm text-gray-700 ml-0 mt-0.5">
-                      <b>Convênio:</b> {c.convenio}
-                    </p>
-                  )}
+{/* Convênio */}
+{c.tipoAtendimento === "convenio" && (
+  <>
+    <p className="text-sm text-gray-700 ml-0">
+      <b>Convênio:</b> {c.convenio}
+    </p>
+
+    {c.categoria && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Categoria:</b> {c.categoria}
+      </p>
+    )}
+
+    {c.carteirinha && (
+      <p className="text-sm text-gray-700 ml-0">
+        <b>Nº da carteirinha:</b> {c.carteirinha}
+      </p>
+    )}
+  </>
+)}
+
 
                   {c.tipoAtendimento === "particular" && (
                     <>

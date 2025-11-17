@@ -48,6 +48,10 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
   const [unidade, setUnidade] = useState("");
   const [valorConsulta, setValorConsulta] = useState(null);
   const [valorTeleconsulta, setValorTeleconsulta] = useState(null);
+  const [convenio, setConvenio] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [carteirinha, setCarteirinha] = useState("");
+
 
 
   // Formata data (YYYY-MM-DD ou DD-MM-YYYY → terça-feira, DD/MM/YYYY)
@@ -164,6 +168,10 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
           dados.tipoConsulta || tipo || tipoDaRota || "presencial";
         setTipoConsulta(tipoFinal);
         setTipoAtendimento(dados.tipoAtendimento || "particular");
+        setConvenio(dados.convenio || "");
+        setCategoria(dados.categoria || "");
+        setCarteirinha(dados.carteirinha || "");
+
 
         // Data e hora
         const { data, hora } = extrairDataHora(dados);
@@ -281,6 +289,28 @@ export default function ConsultaConfirmadaScreen({ tipo = "presencial" }) {
             <b>Atendimento:</b>{" "}
             {tipoAtendimento === "convenio" ? "Convênio" : "Particular"}
           </p>
+
+          {tipoAtendimento === "convenio" && (
+            <>
+              <p>
+                <b>Convênio:</b> {convenio || "—"}
+              </p>
+
+              {categoria && (
+                <p>
+                  <b>Categoria:</b> {categoria}
+                </p>
+              )}
+
+              {carteirinha && (
+                <p>
+                  <b>Nº da carteirinha:</b> {carteirinha}
+                </p>
+              )}
+            </>
+          )}
+
+
           {unidade && unidade !== "—" && (
             <p>
               <b>Unidade médica:</b> {unidade}

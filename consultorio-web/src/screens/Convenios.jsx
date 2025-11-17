@@ -57,7 +57,7 @@ export default function ConveniosPublicPage() {
 
             {/* TÍTULO */}
             <div className="max-w-4xl mx-auto text-center mb-12">
-                <h1 className="text-4xl font-bold text-yellow-400 mb-3">Convênios e Categorias</h1>
+                <h1 className="text-4xl font-momo text-yellow-400 mb-3">Convênios e Categorias</h1>
                 <p className="text-white text-lg">
                     Consulte todos os convênios atendidos na clínica e veja quais médicos atuam em cada categoria.
                 </p>

@@ -6,7 +6,15 @@ import { IMaskInput } from "react-imask";
 import { useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs
+} from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 
@@ -131,6 +139,10 @@ export default function ConsultasScreen() {
   const { user, role } = useAuth();
   const [modalAvisoConclusao, setModalAvisoConclusao] = useState(false);
   const [consultaParaConcluir, setConsultaParaConcluir] = useState(null);
+  const [slotsDisponiveis, setSlotsDisponiveis] = useState([]);
+  const [slotSelecionado, setSlotSelecionado] = useState(null);
+  const [carregandoSlots, setCarregandoSlots] = useState(false);
+
 
 
   const medicoId = role === "doctor" ? user?.uid : uid;
@@ -186,14 +198,10 @@ export default function ConsultasScreen() {
   const [consultaParaCancelar, setConsultaParaCancelar] = useState(null);
   const [modalRetorno, setModalRetorno] = useState(false);
   const [consultaParaRetorno, setConsultaParaRetorno] = useState(null);
-  const [novaData, setNovaData] = useState("");
-  const [novoHorario, setNovoHorario] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [loadingConcluirId, setLoadingConcluirId] = useState(null);
   const [loadingCancelar, setLoadingCancelar] = useState(false);
   const [loadingRetorno, setLoadingRetorno] = useState(false);
-  const [erroDataRetorno, setErroDataRetorno] = useState(false);
-  const [erroHorarioRetorno, setErroHorarioRetorno] = useState(false);
   const [modalConcluirRetorno, setModalConcluirRetorno] = useState(false);
   const [consultaParaConcluirRetorno, setConsultaParaConcluirRetorno] = useState(null);
   const [paginaAtual, setPaginaAtual] = useState(1);
@@ -201,6 +209,8 @@ export default function ConsultasScreen() {
   const [buscaNome, setBuscaNome] = useState("");
   const [buscaData, setBuscaData] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [erroModalRetorno, setErroModalRetorno] = useState("");
+
 
 
 
@@ -242,10 +252,8 @@ export default function ConsultasScreen() {
 
   function calcularIdade(dataNascimento) {
     if (!dataNascimento) return null;
-    let ano, mes, dia;
-    const partes = dataNascimento.split("-");
-    if (partes[0].length === 4) [ano, mes, dia] = partes;
-    else[dia, mes, ano] = partes;
+
+    const [ano, mes, dia] = dataNascimento.split("-");
     const nasc = new Date(`${ano}-${mes}-${dia}T00:00:00`);
     const hoje = new Date();
     let idade = hoje.getFullYear() - nasc.getFullYear();
@@ -396,151 +404,128 @@ export default function ConsultasScreen() {
   function handleAbrirModalRetorno(consultaId) {
     setConsultaParaRetorno(consultaId);
     setModalRetorno(true);
+    carregarSlotsLivresFuturos();
   }
 
-  async function confirmarRetorno() {
-    setErroDataRetorno(false);
-    setErroHorarioRetorno(false);
 
-    if (!consultaParaRetorno || !novaData || !novoHorario) {
-      setErro("Preencha a data e o horário do retorno.");
+  async function confirmarRetorno() {
+    setErroModalRetorno("");
+
+    if (!consultaParaRetorno || !slotSelecionado) {
+      setErro("Selecione um horário válido.");
       return;
     }
 
     if (tipoRetorno === "presencial" && !unidade) {
-      setErro("Selecione uma unidade para o retorno presencial.");
       setErroUnidade(true);
+      setErroModalRetorno("Selecione uma unidade para o retorno presencial.");
       return;
     }
 
-
-    // Validar e converter data (DD/MM/AAAA → YYYY-MM-DD)
-    const partes = novaData.split("/");
-    if (partes.length !== 3) {
-      setErro("Formato de data inválido. Use DD/MM/AAAA.");
-      setErroDataRetorno(true);
-      return;
-    }
-
-    const [dia, mes, ano] = partes.map((p) => parseInt(p, 10));
-    if (
-      isNaN(dia) || isNaN(mes) || isNaN(ano) ||
-      dia < 1 || dia > 31 || mes < 1 || mes > 12 || ano < 1900
-    ) {
-      setErro("Data inválida. Verifique o dia, mês e ano.");
-      setErroDataRetorno(true);
-      return;
-    }
-
-    // Verifica se a data realmente existe
-    const dataObj = new Date(ano, mes - 1, dia);
-    if (
-      dataObj.getFullYear() !== ano ||
-      dataObj.getMonth() + 1 !== mes ||
-      dataObj.getDate() !== dia
-    ) {
-      setErro("Data inválida. Essa data não existe no calendário.");
-      setErroDataRetorno(true);
-      return;
-    }
-
-    const dataFormatada = `${ano}-${String(mes).padStart(2, "0")}-${String(
-      dia
-    ).padStart(2, "0")}`;
-
-    // Validar horário (HH:MM)
-    const [hora, minuto] = novoHorario.split(":").map((p) => parseInt(p, 10));
-    if (
-      isNaN(hora) || isNaN(minuto) ||
-      hora < 0 || hora > 23 || minuto < 0 || minuto > 59
-    ) {
-      setErro("Horário inválido. Use o formato HH:MM (00–23h / 00–59min).");
-      setErroHorarioRetorno(true);
-      return;
-    }
-
-    // Buscar a consulta original para comparar datas
-    const consultaOriginal = consultas.find((c) => c.id === consultaParaRetorno);
-    if (!consultaOriginal) {
-      setErro("Consulta original não encontrada.");
-      return;
-    }
-
-    // Converter a data/hora original
-    const [dataOriginalStr, horaOriginalStr] = consultaOriginal.horario.split(" ");
-    const [anoO, mesO, diaO] = dataOriginalStr.split("-").map(Number);
-    const [horaO, minutoO] = horaOriginalStr.split(":").map(Number);
-    const dataHoraOriginal = new Date(anoO, mesO - 1, diaO, horaO, minutoO);
-
-    // Converter a nova data/hora (retorno)
-    const dataHoraRetorno = new Date(ano, mes - 1, dia, hora, minuto);
-
-    // Bloquear retorno no mesmo dia da consulta original
-    const mesmaData =
-      dataHoraRetorno.getFullYear() === dataHoraOriginal.getFullYear() &&
-      dataHoraRetorno.getMonth() === dataHoraOriginal.getMonth() &&
-      dataHoraRetorno.getDate() === dataHoraOriginal.getDate();
-
-    if (mesmaData) {
-      setErro("O retorno não pode ser marcado para o mesmo dia da consulta.");
-      setErroDataRetorno(true);
-      return;
-    }
-
-    // Bloquear se o retorno for anterior à consulta original
-    if (dataHoraRetorno < dataHoraOriginal) {
-      setErro("A data do retorno deve ser posterior à data da consulta original.");
-      setErroDataRetorno(true);
-      return;
-    }
-
-
-
-
-    // Tudo ok, prossegue
     setLoadingRetorno(true);
+
     try {
       const agendar = httpsCallable(functions, "consultas-agendarRetorno");
       const res = await agendar({
         consultaId: consultaParaRetorno,
-        novaData: dataFormatada, // formato Firestore
-        novoHorario,              // HH:MM
+        slotId: slotSelecionado,
         observacoes,
         tipoRetorno,
         unidade,
       });
 
       if (res.data?.sucesso) {
+        setMensagem("Retorno agendado com sucesso.");
+
+        // Atualiza a lista local com o novo retorno
+        const slotData = slotsDisponiveis.find((s) => s.id === slotSelecionado);
+
         setConsultas((prev) =>
           prev.map((c) =>
             c.id === consultaParaRetorno
               ? {
                 ...c,
                 status: "retorno",
-                retornoAgendado: { novaData: dataFormatada, novoHorario, observacoes, tipoRetorno, unidade },
+                retornoAgendado: {
+                  novaData: slotData.data,
+                  novoHorario: slotData.hora,
+                  observacoes,
+                  tipoRetorno,
+                  unidade,
+                },
               }
               : c
           )
         );
-        setMensagem("Retorno agendado com sucesso.");
       } else {
         setErro("Erro ao agendar retorno.");
       }
-    } catch (e) {
-      console.error("Erro ao agendar retorno:", e);
+    } catch (err) {
+      console.error("Erro ao agendar retorno:", err);
       setErro("Erro ao agendar retorno.");
     } finally {
       setLoadingRetorno(false);
       setModalRetorno(false);
       setConsultaParaRetorno(null);
-      setNovaData("");
-      setNovoHorario("");
+      setSlotSelecionado(null);
       setObservacoes("");
       setTipoRetorno("presencial");
       setUnidade("");
-
     }
   }
+
+
+
+
+
+async function carregarSlotsLivresFuturos() {
+  setCarregandoSlots(true);
+  setSlotsDisponiveis([]);
+  setSlotSelecionado(null);
+
+  try {
+    const ref = collection(db, "availability_slots");
+
+    const snap = await getDocs(
+      query(
+        ref,
+        where("medicoId", "==", medicoId),
+        where("status", "==", "livre")
+      )
+    );
+
+    const hoje = new Date();
+    const hojeISO = hoje.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const lista = snap.docs
+      .map((doc) => {
+        const s = doc.data();
+
+        // converte "DD-MM-YYYY" → "YYYY-MM-DD"
+        const [dd, mm, yyyy] = s.data.split("-");
+        const dataISO = `${yyyy}-${mm}-${dd}`;
+
+        return {
+          id: doc.id,
+          ...s,
+          dataISO,
+        };
+      })
+      .filter((slot) => slot.dataISO >= hojeISO)
+      .sort((a, b) => {
+        if (a.dataISO === b.dataISO) {
+          return a.hora.localeCompare(b.hora);
+        }
+        return a.dataISO.localeCompare(b.dataISO);
+      });
+
+    setSlotsDisponiveis(lista);
+  } catch (error) {
+    console.error("Erro ao carregar slots:", error);
+  } finally {
+    setCarregandoSlots(false);
+  }
+}
 
 
 
@@ -956,14 +941,12 @@ export default function ConsultasScreen() {
                       <button
                         onClick={() => {
                           setConsultaParaRetorno(c.id);
-                          setNovaData(
-                            c.retornoAgendado?.novaData
-                              ? c.retornoAgendado.novaData.split("-").reverse().join("/")
-                              : ""
-                          );
-                          setNovoHorario(c.retornoAgendado?.novoHorario || "");
                           setObservacoes(c.retornoAgendado?.observacoes || "");
+                          setTipoRetorno(c.retornoAgendado?.tipoRetorno || "presencial");
+                          setUnidade(c.retornoAgendado?.unidade || "");
                           setModalRetorno(true);
+                          carregarSlotsLivresFuturos();
+
                         }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
                       >
@@ -1189,35 +1172,66 @@ export default function ConsultasScreen() {
                   </div>
                 )}
 
-                {/* Data */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data do Retorno
-                  </label>
-                  <IMaskInput
-                    mask="00/00/0000"
-                    placeholder="DD/MM/AAAA"
-                    className={`border rounded-md w-full px-3 py-2 text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent ${erroDataRetorno ? "border-red-500" : "border-gray-300"
-                      }`}
-                    value={novaData}
-                    onAccept={(v) => setNovaData(v)}
-                  />
-                </div>
+                {slotSelecionado && (
+                  <p className="text-gray-700 text-sm bg-gray-100 p-2 rounded-md">
+                    <b>Data selecionada:</b>{" "}
+                    {slotsDisponiveis
+                      .find((s) => s.id === slotSelecionado)
+                      ?.data.replace(/-/g, "/")}
+                    <br />
+                    <b>Horário:</b>{" "}
+                    {slotsDisponiveis.find((s) => s.id === slotSelecionado)?.hora}
+                  </p>
+                )}
 
-                {/* Horário */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Horário do Retorno
-                  </label>
-                  <IMaskInput
-                    mask="00:00"
-                    placeholder="HH:MM"
-                    className={`border rounded-md w-full px-3 py-2 text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent ${erroHorarioRetorno ? "border-red-500" : "border-gray-300"
-                      }`}
-                    value={novoHorario}
-                    onAccept={(v) => setNovoHorario(v)}
-                  />
-                </div>
+
+{/* Lista de horários disponíveis */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Slots disponíveis
+  </label>
+
+  {carregandoSlots ? (
+    <p className="text-gray-600 text-sm">Carregando horários...</p>
+  ) : slotsDisponiveis.length === 0 ? (
+    <p className="text-red-600 text-sm">Nenhum horário disponível.</p>
+  ) : (
+    <div className="relative">
+  <select
+    value={slotSelecionado || ""}
+    onChange={(e) => setSlotSelecionado(e.target.value)}
+    className="appearance-none w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900
+               focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-8"
+  >
+    <option value="">Selecione um horário</option>
+    {slotsDisponiveis.map((slot) => (
+      <option key={slot.id} value={slot.id}>
+        {slot.data.replace(/-/g, "/")} — {slot.hora}
+      </option>
+    ))}
+  </select>
+
+  {/* Ícone da setinha personalizada */}
+  <svg
+    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 9l-7 7-7-7"
+    />
+  </svg>
+</div>
+
+  )}
+</div>
+
+
 
                 {/* Observações */}
                 <div>
@@ -1292,7 +1306,7 @@ export default function ConsultasScreen() {
               )}
 
               <p className="text-gray-700 mb-5">
-                ⚠ 
+                ⚠
                 <br />
                 Esta ação é irreversível e encerrará definitivamente o atendimento.
               </p>
