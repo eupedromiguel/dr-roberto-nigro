@@ -1106,6 +1106,3 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
     </div>
   );
 }
-
-
-
