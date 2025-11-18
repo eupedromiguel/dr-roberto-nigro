@@ -14,7 +14,7 @@ export default function HomeScreen() {
   const SectionDivider = () => (
     <div className="flex items-center justify-center mb-2">
       <div className="w-16 h-[2px] bg-yellow-400 mr-3 rounded-full animate-pulse"></div>
-      <Stethoscope className="w-8 h-8 text-yellow-500" strokeWidth={1.5} />
+      <Stethoscope className="w-8 h-8 text-yellow-400" strokeWidth={1.5} />
       <div className="w-16 h-[2px] bg-yellow-400 ml-3 rounded-full animate-pulse"></div>
     </div>
   );
@@ -140,7 +140,7 @@ export default function HomeScreen() {
 
           <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
             <h1 className="text-4xl md:text-5xl font-momo mb-3">Bem-vindo</h1>
-            <p className="text-slate-200 max-w-2xl mx-auto text-lg leading-relaxed">
+            <p className="text-white max-w-2xl mx-auto text-lg leading-relaxed">
               Cuide da sua saúde com praticidade. Agende consultas, visualize médicos e acompanhe seu histórico.
             </p>
           </div>
@@ -151,7 +151,7 @@ export default function HomeScreen() {
           <div className="max-w-6xl mx-auto px-2 pt-6 pb-2">
 
             <SectionDivider />
-            <h2 className="text-4xl text-white font-light mb-5 text-center">
+            <h2 className="text-4xl text-white font-momo mb-5 text-center">
               Conheça nosso corpo clínico
             </h2>
 
@@ -164,20 +164,23 @@ export default function HomeScreen() {
         <section className="flex flex-col items-center justify-center py-4 bg-gray-800 px-6">
           {!user ? (
             <>
-              <h2 className="text-4xl font-light text-yellow-400 mb-4">
+              <h2 className="text-center text-4xl font-momo text-yellow-400 mb-4">
                 Nosso compromisso é o seu bem-estar
               </h2>
-              <p className="text-white text-lg max-w-2xl mb-6">
+              <p className="text-center text-white text-lg max-w-2xl mb-6">
                 Atendimento humanizado, equipe experiente e foco total na sua saúde.
               </p>
 
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+
                 <Link
                   to="/login"
                   className="bg-gray-950 text-white hover:bg-yellow-400 font-semibold px-6 py-3 rounded-lg shadow transition"
                 >
                   Entrar
                 </Link>
+
+                
                 <Link
                   to="/register"
                   className="bg-gray-950 text-white hover:bg-yellow-500 font-semibold px-6 py-3 rounded-lg shadow transition"

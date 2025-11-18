@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext";
 export default function MainLayout({ children }) {
   const { user, role } = useAuth();
 
-  // Se o admin estiver logado, ativa padding lateral no desktop
   const isAdmin = user && role === "admin";
 
   return (
@@ -18,7 +17,11 @@ export default function MainLayout({ children }) {
       <Navbar />
 
       {/* Conteúdo principal */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+      <main
+        className={`flex-1 max-w-6xl mx-auto w-full px-4 py-6 ${
+          isAdmin ? "pt-14 md:pt-6" : ""
+        }`}
+      >
         {children}
       </main>
 
