@@ -251,6 +251,7 @@ export default function AgendaScreen() {
   const [modalAppointmentOpen, setModalAppointmentOpen] = useState(false);
   const [appointmentSelecionado, setAppointmentSelecionado] = useState(null);
   const [diaComInputAberto, setDiaComInputAberto] = useState(null);
+  const [filtroData, setFiltroData] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
 
 
@@ -606,17 +607,48 @@ export default function AgendaScreen() {
       return;
     }
     try {
-      const criarFn = httpsCallable(functions, "medicos-criarSlot");
-      const res = await criarFn({ medicoId, data: dia, hora });
-      if (res.data?.sucesso) {
-        notify(`Horário ${hora} adicionado em ${formatarDataCompleta(dia)}.`, "success");
-        await carregarSlots();
-      } else notify(res.data?.mensagem || "Erro ao criar horário.", "error");
-    } catch (err) {
-      console.error("Erro ao criar:", err);
-      notify("Erro ao criar horário.", "error");
+    const criarFn = httpsCallable(functions, "medicos-criarSlot");
+    const res = await criarFn({ medicoId, data: dia, hora });
+
+    if (res.data?.sucesso) {
+      notify(`Horário ${hora} adicionado em ${formatarDataCompleta(dia)}.`, "success");
+      await carregarSlots();
+      return;
     }
+
+    // Mensagem específica do backend
+    const msg = res.data?.mensagem || "";
+
+    if (msg.includes("Já existe um slot para este dia e hora")) {
+      notify(`⚠ O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
+      return;
+    }
+
+    if (msg.includes("Slot reaberto com sucesso")) {
+      notify(`♻️ O horário ${hora} foi reaberto com sucesso.`, "success");
+      await carregarSlots();
+      return;
+    }
+
+    notify(msg || "Erro ao criar horário.", "error");
+
+  } catch (err) {
+  console.error("Erro ao criar:", err);
+
+  if (err.code === "already-exists") {
+    notify(`⚠ O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
+    return;
   }
+
+  if (err.code === "failed-precondition") {
+    notify("Não é permitido criar horário no passado.", "error");
+    return;
+  }
+
+  notify(err.message || "Erro ao criar horário.", "error");
+}
+
+}
 
 
   async function criarVariosSlots(lista) {
@@ -699,17 +731,34 @@ export default function AgendaScreen() {
     (dia) => dia >= todayStr() && !diasOcultos.includes(dia)
   );
 
+
+  // Filtro por data digitada (DD/MM/AAAA)
+  const diasFiltrados = filtroData.trim()
+    ? diasFuturos.filter((d) => {
+      const [yyyy, mm, dd] = d.split("-");
+      const formatoBR = `${dd}/${mm}/${yyyy}`;
+      return formatoBR.startsWith(filtroData);
+    })
+    : diasFuturos;
+
+
+
   const diasPorPagina = 15;
-  const totalPaginas = Math.ceil(diasFuturos.length / diasPorPagina);
+  const totalPaginas = Math.ceil(diasFiltrados.length / diasPorPagina);
   useEffect(() => {
     if (paginaAtual > totalPaginas) {
       setPaginaAtual(totalPaginas || 1);
     }
   }, [totalPaginas]);
 
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [filtroData]);
+
+
   const indiceInicial = (paginaAtual - 1) * diasPorPagina;
   const indiceFinal = indiceInicial + diasPorPagina;
-  const diasPaginados = diasFuturos.slice(indiceInicial, indiceFinal);
+  const diasPaginados = diasFiltrados.slice(indiceInicial, indiceFinal);
 
 
 
@@ -857,6 +906,36 @@ export default function AgendaScreen() {
             <p className="text-gray-500 text-sm">Nenhum dia disponível.</p>
           ) : (
             <>
+
+
+
+              {/* BARRA DE BUSCA POR DATA */}
+              <div className="flex justify-center mb-1">
+                <div className="flex items-center gap-2 bg-gray-800 rounded-lg border border-gray-300 px-4 py-3 w-full shadow-sm">
+
+                  <IMaskInput
+                    mask="00/00/0000"
+                    value={filtroData}
+                    onAccept={(v) => setFiltroData(v)}
+                    placeholder="Buscar data (DD/MM/AAAA)"
+                    className="flex-1 outline-none text-gray-100 text-sm"
+                  />
+                  {filtroData && (
+                    <button
+                      onClick={() => setFiltroData("")}
+                      className="text-gray-100 hover:text-gray-800 text-sm"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+
+
+
+
+
               {/* PAGINAÇÃO — TOPO (uma vez só) */}
               {totalPaginas > 1 && (
                 <Pagination
@@ -875,10 +954,10 @@ export default function AgendaScreen() {
                 );
 
                 return (
-                  <div key={dia} className="border rounded-md p-4 bg-gray-50">
+                  <div key={dia} className="border rounded-md p-4 bg-gray-800">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-700">
+                        <h3 className="font-semibold text-white">
                           📅 {formatarDataCompleta(dia)}
                         </h3>
 
@@ -919,7 +998,7 @@ export default function AgendaScreen() {
                               setDiaParaExcluir(dia);
                               setConfirmDeleteDayOpen(true);
                             }}
-                            className="!text-xs !px-3 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-red-100 !max-w-[150px] truncate"
+                            className="!text-xs !px-3 !py-2 !border !border-transparent !bg-white !text-gray-950 hover:!bg-red-100 !max-w-[150px] truncate"
                           >
                             Cancelar todos
                           </Button>
@@ -946,9 +1025,9 @@ export default function AgendaScreen() {
                                 const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
                                 window.open(url, "_blank", "noopener,noreferrer");
                               }}
-                              className={slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""}
+                              className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""} text-white font-medium`}
                             >
-                              {slot.hora} —{" "}
+                              {slot.hora} - {" "}
                               <b
                                 className={
                                   slot.status === "ocupado"
@@ -1164,7 +1243,7 @@ function AdicionarHorarioButton({
           setHora("");
           setDiaComInputAberto(dia)
         }}
-        className="!text-xs !px-5 !py-2 !border !border-gray-950 !bg-white !text-gray-950 hover:!bg-green-100 whitespace-nowrap flex-shrink"
+        className="!text-xs !px-5 !py-2 !border !border-transparent !bg-white !text-gray-950 hover:!bg-green-100 whitespace-nowrap flex-shrink"
       >
         Adicionar horário
       </Button>
@@ -1183,7 +1262,7 @@ function AdicionarHorarioButton({
         value={hora}
         onAccept={(v) => setHora(v)}
         placeholder="HH:MM"
-        className="border border-gray-400 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        className="border border-gray-400 text-white rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
         required
       />
       <button

@@ -84,11 +84,18 @@ exports.criarSlot = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`✅ Slot criado: ${dataFormatada} às ${hora} — médico ${targetMedicoId}`);
+    console.log(`Slot criado: ${dataFormatada} às ${hora} — médico ${targetMedicoId}`);
     return { sucesso: true, mensagem: "Slot criado com sucesso." };
   } catch (error) {
-    console.error("❌ Erro ao criar slot:", error);
-    throw new HttpsError("internal", "Erro ao criar o slot.", error.message);
+    console.error("Erro ao criar slot:", error);
+
+
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+
+    throw new HttpsError("internal", error.message || "Erro ao criar o slot.");
   }
 });
 
