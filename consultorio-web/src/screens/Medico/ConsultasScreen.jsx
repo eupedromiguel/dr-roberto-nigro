@@ -16,8 +16,6 @@ import {
   getDocs
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import ConsultaCard from "../../components/ConsultaCard";
-
 
 
 // Função de páginação
@@ -332,7 +330,7 @@ export default function ConsultasScreen() {
             c.id === consultaParaCancelar ? { ...c, status: "cancelada" } : c
           )
         );
-        setMensagem("Consulta cancelada com sucesso.");
+        showToast("Consulta cancelada com sucesso.");
       } else {
         setErro("Erro ao cancelar consulta.");
       }
@@ -386,7 +384,7 @@ export default function ConsultasScreen() {
             c.id === consultaId ? { ...c, status: "concluida" } : c
           )
         );
-        setMensagem("Consulta marcada como concluída.");
+        showToast("Consulta marcada como concluída.");
       } else {
         setErro("Erro ao concluir consulta.");
       }
@@ -567,13 +565,45 @@ export default function ConsultasScreen() {
   }
 
   // Aplica filtros antes da paginação
-  const consultasFiltradas = consultas.filter((c) => {
+    const consultasFiltradas = consultas.filter((c) => {
     const paciente = pacientesInfo[c.pacienteId];
     const nome = paciente?.nome?.toLowerCase() || "";
     const buscaLower = buscaNome.toLowerCase();
 
-    // Verifica se nome combina
+    // Permitir busca por ID
+    const matchId = c.id.toLowerCase().includes(buscaLower);
+
+    // Busca por nome
     const matchNome = nome.includes(buscaLower);
+
+    // Busca por convênio
+    const convenio = (c.convenio || "").toLowerCase();
+    const matchConvenio = convenio.includes(buscaLower);
+
+    // Carteirinha
+    const carteirinha = (c.carteirinha || "").toLowerCase();
+    const matchCarteirinha = carteirinha.includes(buscaLower);
+
+    // Categoria
+    const categoria = (c.categoria || "").toLowerCase();
+    const matchCategoria = categoria.includes(buscaLower);
+
+    // Telefone 
+    const telefone = (paciente?.telefone || "").toLowerCase();
+    const matchTelefone = telefone.includes(buscaLower);
+
+    // CPF 
+    const cpf = (paciente?.cpf || "").toLowerCase();
+    const matchCpf = cpf.includes(buscaLower);
+
+    // Tipo de consulta (presencial / teleconsulta)
+    const tipoConsulta = (c.tipoConsulta || "").toLowerCase();
+    const matchTipoConsulta = tipoConsulta.includes(buscaLower);
+
+    // Tipo de atendimento (particular / convenio)
+    const tipoAtendimento = (c.tipoAtendimento || "").toLowerCase();
+    const matchTipoAtendimento = tipoAtendimento.includes(buscaLower);
+
 
     // Verifica se data da consulta (DD/MM/AAAA) combina
     const [dataOriginalStr] = c.horario.split(" ");
@@ -589,8 +619,21 @@ export default function ConsultasScreen() {
 
     // Se tiver busca de data, prioriza ela
     if (buscaData) return matchData && matchStatus;
-    // Senão, busca por nome
-    return matchNome && matchStatus;
+    // Senão, busca por nome, id ou convênio
+    return (
+  matchNome ||
+  matchId ||
+  matchConvenio ||
+  matchCarteirinha ||
+  matchCategoria ||
+  matchTelefone ||
+  matchCpf ||
+  matchTipoConsulta ||
+  matchTipoAtendimento
+) && matchStatus;
+
+
+
   });
 
   // Depois, aplica paginação sobre o resultado filtrado
@@ -650,7 +693,7 @@ export default function ConsultasScreen() {
         {/* Campo de nome */}
         <input
           type="text"
-          placeholder="Pesquisar por nome..."
+          placeholder="Pesquisar..."
           value={buscaNome}
           onChange={(e) => {
             setBuscaNome(e.target.value);
@@ -745,26 +788,252 @@ export default function ConsultasScreen() {
             const tipo = c.tipoConsulta || "presencial";
 
             return (
-              <ConsultaCard
+              <li
                 key={c.id}
-                consulta={c}
-                paciente={paciente}
-                onConcluir={(id) => handleConcluir(id)}
-                onCancelar={(id) => handleAbrirModal(id)}
-                onAgendarRetorno={(id) => handleAbrirModalRetorno(id)}
-                onRemarcarRetorno={(id) => {
-                  // Remarcar retorno faz o mesmo comportamento que você já usa
-                  setConsultaParaRetorno(id);
-                  setObservacoes(c.retornoAgendado?.observacoes || "");
-                  setTipoRetorno(c.retornoAgendado?.tipoRetorno || "presencial");
-                  setUnidade(c.retornoAgendado?.unidade || "");
-                  setModalRetorno(true);
-                  carregarSlotsLivresFuturos();
-                }}
-                formatarStatus={formatarStatus}
-                formatarDataHora={formatarDataHora}
-                gerarLinkTelefone={gerarLinkTelefone}
-              />
+                className="border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-5"
+              >
+                {/* Cabeçalho com nome do paciente */}
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {paciente?.nome || "Carregando..."}{" "}
+                      {paciente?.idade && (
+                        <span className="text-gray-500 text-sm font-normal">
+                          ({paciente.idade} anos)
+                        </span>
+                      )}
+                    </h3>
+                    {paciente?.sexoBiologico && (
+                      <p className="text-sm mt-0.5">
+                        <b>Sexo biológico:</b>{" "}
+                        <span
+                          className={`${paciente.sexoBiologico === "Feminino"
+                            ? "text-pink-600"
+                            : paciente.sexoBiologico === "Masculino"
+                              ? "text-blue-600"
+                              : "text-gray-700"
+                            } font-medium`}
+                        >
+                          {paciente.sexoBiologico}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Status badge */}
+                  <span
+                    className={`px-3 py-1 text-xs font-semibold rounded-full self-start
+        ${c.status === "cancelada"
+                        ? "bg-red-100 text-red-700"
+                        : c.status === "concluida"
+                          ? "bg-green-100 text-green-700"
+                          : c.status === "retorno"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-yellow-100 text-yellow-700"
+                      }`}
+                  >
+                    {formatarStatus(c.status)}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-sm text-gray-700">
+                  {paciente?.telefone && paciente.telefone !== "(sem telefone)" && (
+                    <p>
+                      <b>Telefone:</b>{" "}
+                      <a
+                        href={gerarLinkTelefone(paciente.telefone)}
+                        className="text-gray-900 underline"
+                      >
+                        {paciente.telefone}
+                      </a>
+                    </p>
+                  )}
+
+                  {paciente?.cpf && (
+                    <p>
+                      <b>CPF:</b> {paciente.cpf}
+                    </p>
+                  )}
+
+                  <p>
+                    <b>Data e hora:</b> {formatarDataHora(c.horario)}
+                  </p>
+                  <p>
+                    <b>Tipo de consulta:</b>{" "}
+                    {tipo === "teleconsulta" ? "Teleconsulta" : "Presencial"}
+                  </p>
+
+                  {c.tipoAtendimento === "particular" && (
+                    <>
+                      {tipo === "teleconsulta" && c.valorteleConsulta && (
+                        <p>
+                          <b>Valor da teleconsulta:</b>{" "}
+                          <span className="font-semibold text-gray-900">
+                            R$ {parseFloat(c.valorteleConsulta).toFixed(2)}
+                          </span>
+                        </p>
+                      )}
+                      {tipo === "presencial" && c.valorConsulta && (
+                        <p>
+                          <b>Valor presencial:</b>{" "}
+                          <span className="font-semibold text-gray-900">
+                            R$ {parseFloat(c.valorConsulta).toFixed(2)}
+                          </span>
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {c.unidade && (
+                    <p>
+                      <b>Unidade:</b> {c.unidade}
+                    </p>
+                  )}
+
+                  {c.tipoAtendimento && (
+                    <p>
+                      <b>Tipo de atendimento:</b> {c.tipoAtendimento}
+                    </p>
+                  )}
+                  {c.convenio && (
+                    <p>
+                      <b>Convênio:</b> {c.convenio}
+                    </p>
+                  )}
+
+
+                  {c.categoria && (
+                    <p>
+                      <b>Categoria:</b> {c.categoria}
+                    </p>
+                  )}
+
+                  {c.carteirinha && (
+                    <p>
+                      <b>Carteirinha:</b> {c.carteirinha}
+                    </p>
+                  )}
+
+
+                  {c.sintomas && (
+                    <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-100">
+                      <b>Sintomas / Alergias:</b> {c.sintomas}
+                    </div>
+                  )}
+                </div>
+
+                {/* Retorno */}
+                {c.retornoAgendado && (
+                  <div className="mt-4 border-t border-gray-200 bg-yellow-50 pt-3 pb-3 px-3 rounded-lg text-sm">
+
+                    <p className="font-semibold text-gray-900 mb-1">📋 Retorno agendado:</p>
+                    <p>
+                      <b>Data e horário:</b>{" "}
+                      {formatarDataHora(
+                        `${c.retornoAgendado.novaData} ${c.retornoAgendado.novoHorario}`
+                      )}
+                    </p>
+                    <p>
+                      <b>Tipo:</b>{" "}
+                      {c.retornoAgendado.tipoRetorno === "teleconsulta"
+                        ? "Teleconsulta"
+                        : "Presencial"}
+                    </p>
+                    {c.retornoAgendado.tipoRetorno === "presencial" && c.retornoAgendado.unidade && (
+                      <p>
+                        <b>Unidade:</b> {c.retornoAgendado.unidade}
+                      </p>
+                    )}
+
+                    {c.retornoAgendado.observacoes && (
+                      <p>
+                        <b>Obs:</b> {c.retornoAgendado.observacoes}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Botões */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {c.status === "agendado" && (
+                    <>
+                      <button
+                        onClick={() => handleConcluir(c.id)}
+                        disabled={loadingConcluirId === c.id}
+                        className={`${loadingConcluirId === c.id
+                          ? "bg-green-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                          } text-white px-3 py-1.5 rounded-md text-sm flex items-center gap-2`}
+                      >
+                        {loadingConcluirId === c.id && (
+                          <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                        )}
+                        {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
+                      </button>
+
+                      <button
+                        onClick={() => handleAbrirModal(c.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm"
+                      >
+                        Cancelar
+                      </button>
+                    </>
+                  )}
+
+                  {c.status === "concluida" && !c.retornoAgendado && (
+                    <button
+                      onClick={() => handleAbrirModalRetorno(c.id)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+                    >
+                      Agendar Retorno
+                    </button>
+                  )}
+
+                  {c.status === "retorno" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setConsultaParaRetorno(c.id);
+                          setObservacoes(c.retornoAgendado?.observacoes || "");
+                          setTipoRetorno(c.retornoAgendado?.tipoRetorno || "presencial");
+                          setUnidade(c.retornoAgendado?.unidade || "");
+                          setModalRetorno(true);
+                          carregarSlotsLivresFuturos();
+
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+                      >
+                        Remarcar Retorno
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setConsultaParaConcluirRetorno(c.id);
+                          setModalConcluirRetorno(true);
+                        }}
+                        disabled={loadingConcluirId === c.id}
+                        className={`${loadingConcluirId === c.id
+                          ? "bg-green-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                          } text-white px-3 py-1.5 rounded-md text-sm flex items-center gap-2`}
+                      >
+                        {loadingConcluirId === c.id && (
+                          <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+                        )}
+                        {loadingConcluirId === c.id ? "Concluindo..." : "Concluir"}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-3 text-[11px] text-gray-400 font-mono bg-gray-50 px-2 py-1 rounded w-fit">
+                  ID:{" "}
+                  <span className="select-all">
+                    {c.id}
+                  </span>
+                </div>
+
+              </li>
 
             );
           })}
@@ -1157,11 +1426,20 @@ export default function ConsultasScreen() {
 
               <div className="flex justify-center gap-3">
                 <button
-                  onClick={() => handleConcluir(consultaParaConcluir, true)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md text-sm"
-                >
-                  Confirmar
-                </button>
+  onClick={() => handleConcluir(consultaParaConcluir, true)}
+  disabled={loadingConcluirId === consultaParaConcluir}
+  className={`${
+    loadingConcluirId === consultaParaConcluir
+      ? "bg-yellow-400 cursor-not-allowed"
+      : "bg-yellow-500 hover:bg-yellow-600"
+  } text-white px-4 py-2 rounded-md text-sm flex items-center gap-2`}
+>
+  {loadingConcluirId === consultaParaConcluir && (
+    <span className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></span>
+  )}
+  {loadingConcluirId === consultaParaConcluir ? "Concluindo..." : "Confirmar"}
+</button>
+
 
                 <button
                   onClick={() => setModalAvisoConclusao(false)}
