@@ -383,3 +383,43 @@ exports.listarSlotsPublicos = onCall(async (request) => {
     throw new HttpsError("internal", "Erro ao listar slots públicos.");
   }
 });
+
+/**
+ * ==========================================================
+ * Buscar Appointment por Slot ID
+ * ==========================================================
+ */
+
+exports.medicosbuscarAppointmentPorSlot = onCall(async (request) => {
+  if (!request.auth)
+    throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+
+  const { slotId } = request.data || {};
+
+  if (!slotId)
+    throw new HttpsError("invalid-argument", "slotId é obrigatório.");
+
+  try {
+    const snap = await db
+      .collection("appointments")
+      .where("slotId", "==", slotId)
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return { sucesso: false, mensagem: "Nenhuma consulta encontrada." };
+    }
+
+    const doc = snap.docs[0];
+    return {
+      sucesso: true,
+      appointment: {
+        id: doc.id,
+        ...doc.data(),
+      },
+    };
+  } catch (err) {
+    console.error("Erro ao buscar appointment por slot:", err);
+    throw new HttpsError("internal", "Erro ao buscar appointment.");
+  }
+});

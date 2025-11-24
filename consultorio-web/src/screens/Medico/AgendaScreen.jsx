@@ -171,7 +171,7 @@ export default function AgendaScreen() {
 
   async function abrirAppointmentDoSlot(slotId) {
     try {
-      const fn = httpsCallable(functions, "medicos-buscarAppointmentPorSlot");
+      const fn = httpsCallable(functions, "medicosbuscarAppointmentPorSlot");
       const res = await fn({ slotId });
 
       if (!res.data?.sucesso || !res.data?.appointment) {
@@ -179,14 +179,25 @@ export default function AgendaScreen() {
         return;
       }
 
-      setAppointmentSelecionado(res.data.appointment);
-      setModalAppointmentOpen(true);
+      const consultaId = res.data.appointment.id;
+
+      // Base da URL depende se é médico ou admin
+      const basePath =
+        role === "admin"
+          ? `/medico/consultas/${medicoId}`
+          : "/medico/consultas";
+
+      const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
+
+      // Abrir em nova aba
+      window.open(url, "_blank", "noopener,noreferrer");
 
     } catch (e) {
       console.error(e);
       notify("Erro ao buscar dados da consulta.", "error");
     }
   }
+
 
 
 
@@ -817,20 +828,43 @@ export default function AgendaScreen() {
                     slotsPorData[dia].map((slot) => (
                       <li key={slot.id} className="py-2 flex justify-between items-center">
                         <span
-                          onClick={() => {
-                            if (slot.status === "ocupado") {
-                              abrirAppointmentDoSlot(slot.id);
+                          onClick={async () => {
+                            if (slot.status !== "ocupado") return;
+
+                            try {
+                              const fn = httpsCallable(functions, "medicosbuscarAppointmentPorSlot");
+                              const res = await fn({ slotId: slot.id });
+
+                              if (!res.data?.sucesso || !res.data?.appointment) {
+                                notify("Não foi possível localizar a consulta deste horário.", "error");
+                                return;
+                              }
+
+                              const consultaId = res.data.appointment.id;
+
+                              // monta o link baseado no tipo de usuário
+                              const basePath =
+                                role === "admin"
+                                  ? `/medico/consultas/${medicoId}`
+                                  : "/medico/consultas";
+
+                              const url = `${basePath}?consulta=${consultaId}`;
+
+                              window.open(url, "_blank");
+                            } catch (e) {
+                              console.error(e);
+                              notify("Erro ao abrir a consulta.", "error");
                             }
                           }}
-                          className={`
-    ${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""}
-  `}
+
+                          className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""}`}
                         >
                           ⏰ {slot.hora} —{" "}
                           <b className={slot.status === "ocupado" ? "text-blue-600" : slot.status === "livre" ? "text-green-600" : "text-red-600"}>
                             {slot.status}
                           </b>
                         </span>
+
 
 
                         {slot.status === "cancelado" ? (
