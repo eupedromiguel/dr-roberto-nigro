@@ -171,7 +171,7 @@ export default function AgendaScreen() {
 
   async function abrirAppointmentDoSlot(slotId) {
     try {
-      const fn = httpsCallable(functions, "medicosbuscarAppointmentPorSlot");
+      const fn = httpsCallable(functions, "medicos-buscarAppointmentPorSlot");
       const res = await fn({ slotId });
 
       if (!res.data?.sucesso || !res.data?.appointment) {
@@ -828,42 +828,39 @@ export default function AgendaScreen() {
                     slotsPorData[dia].map((slot) => (
                       <li key={slot.id} className="py-2 flex justify-between items-center">
                         <span
-                          onClick={async () => {
+                          onClick={() => {
                             if (slot.status !== "ocupado") return;
 
-                            try {
-                              const fn = httpsCallable(functions, "medicosbuscarAppointmentPorSlot");
-                              const res = await fn({ slotId: slot.id });
+                            const consultaId = slot.appointmentId;
 
-                              if (!res.data?.sucesso || !res.data?.appointment) {
-                                notify("Não foi possível localizar a consulta deste horário.", "error");
-                                return;
-                              }
-
-                              const consultaId = res.data.appointment.id;
-
-                              // monta o link baseado no tipo de usuário
-                              const basePath =
-                                role === "admin"
-                                  ? `/medico/consultas/${medicoId}`
-                                  : "/medico/consultas";
-
-                              const url = `${basePath}?consulta=${consultaId}`;
-
-                              window.open(url, "_blank");
-                            } catch (e) {
-                              console.error(e);
-                              notify("Erro ao abrir a consulta.", "error");
+                            if (!consultaId) {
+                              notify("Este horário ocupado não possui appointmentId.", "error");
+                              return;
                             }
-                          }}
 
+                            // base da rota depende se é médico ou admin
+                            const basePath =
+                              role === "admin"
+                                ? `/medico/consultas/${medicoId}`
+                                : "/medico/consultas";
+
+                            const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          }}
                           className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""}`}
                         >
                           ⏰ {slot.hora} —{" "}
-                          <b className={slot.status === "ocupado" ? "text-blue-600" : slot.status === "livre" ? "text-green-600" : "text-red-600"}>
+                          <b className={
+                            slot.status === "ocupado"
+                              ? "text-blue-600"
+                              : slot.status === "livre"
+                                ? "text-green-600"
+                                : "text-red-600"
+                          }>
                             {slot.status}
                           </b>
                         </span>
+
 
 
 

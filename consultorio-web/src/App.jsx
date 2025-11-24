@@ -35,6 +35,7 @@ import ConsultaConfirmadaScreen from "./screens/Paciente/ConsultaConfirmadaScree
 // ===============================
 import AgendaScreen from "./screens/Medico/AgendaScreen";
 import ConsultasScreen from "./screens/Medico/ConsultasScreen";
+import ConsultaDetalheScreen from "./screens/Medico/ConsultaDetalheScreen";
 
 // ===============================
 // Páginas de administrador
@@ -222,6 +223,19 @@ export default function App() {
                 </PrivateRoute>
               }
             />
+
+
+            <Route
+              path="/consulta/:id"
+              element={
+                <PrivateRoute roles={["doctor", "admin"]}>
+                  <PrivateLayout>
+                    <ConsultaDetalheScreen />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+
 
             {/* ========================================= */}
             {/* ADMINISTRADOR */}
