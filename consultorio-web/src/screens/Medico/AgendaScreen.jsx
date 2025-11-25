@@ -254,7 +254,6 @@ export default function AgendaScreen() {
   const [diaComInputAberto, setDiaComInputAberto] = useState(null);
   const [filtroData, setFiltroData] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
-  
 
 
 
