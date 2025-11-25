@@ -254,8 +254,16 @@ export default function AgendaScreen() {
   const [diaComInputAberto, setDiaComInputAberto] = useState(null);
   const [filtroData, setFiltroData] = useState("");
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [diasAbertos, setDiasAbertos] = useState({});
 
 
+
+  function toggleDia(dia) {
+    setDiasAbertos(prev => ({
+      ...prev,
+      [dia]: !prev[dia]
+    }));
+  }
 
 
   // Função que limita o número da página ao intervalo válido
@@ -393,13 +401,22 @@ export default function AgendaScreen() {
     return `${yyyy}-${mm}-${dd}` < todayStr();
   }
 
+
+
   function formatarDataCompleta(dataStr) {
     if (!dataStr) return "";
+
     const [yyyy, mm, dd] = dataStr.split("-");
     const dataObj = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
-    const nomeDia = dataObj.toLocaleDateString("pt-BR", { weekday: "long" });
+
+    let nomeDia = dataObj.toLocaleDateString("pt-BR", { weekday: "long" });
+
+    nomeDia = nomeDia.charAt(0).toUpperCase() + nomeDia.slice(1);
+
     return `${nomeDia}, ${dd}/${mm}/${yyyy}`;
   }
+
+
 
   async function carregarSlots() {
     if (!medicoId) return;
@@ -767,7 +784,7 @@ export default function AgendaScreen() {
 
               <p className="text-gray-700 mb-6 text-sm">
                 Você só pode cancelar dias sem compromissos.
-                Antes, verifique-os na seção <b>Agenda / Consultas</b>,
+                Antes, verifique-os na seção <b>Agenda / Consultas</b>, ou clique sobre o slot ocupado,
                 cancele consultas ou remarque os retornos, e depois tente novamente.
               </p>
 
@@ -787,48 +804,48 @@ export default function AgendaScreen() {
 
 
       {loading ? (
-  <div className="max-w-4xl mx-auto bg-gray-900 shadow rounded-md p-7 space-y-6">
+        <div className="max-w-4xl mx-auto bg-gray-900 shadow rounded-md p-7 space-y-6">
 
-    {/* Título */}
-    <div className="h-6 w-40 bg-gray-700 rounded animate-pulse"></div>
+          {/* Título */}
+          <div className="h-6 w-40 bg-gray-700 rounded animate-pulse"></div>
 
-    {/* Botões */}
-    <div className="flex flex-col md:flex-row gap-3">
-      <div className="h-10 w-full md:w-40 bg-gray-700 rounded animate-pulse"></div>
-      <div className="h-10 w-full md:w-40 bg-gray-700 rounded animate-pulse"></div>
-    </div>
-
-    {/* Barra de busca */}
-    <div className="h-11 w-full bg-gray-800 rounded-lg animate-pulse"></div>
-
-    {/* Skeleton de vários dias */}
-    <div className="space-y-6">
-      {[1,2,3,4].map((i) => (
-        <div
-          key={i}
-          className="bg-gray-800 border border-gray-700 rounded-md p-5 space-y-4 animate-pulse"
-        >
-          {/* Cabeçalho do dia */}
-          <div className="flex items-center justify-between">
-            <div className="h-5 w-52 bg-gray-600 rounded"></div>
-            <div className="h-8 w-32 bg-gray-700 rounded"></div>
+          {/* Botões */}
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="h-10 w-full md:w-40 bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-10 w-full md:w-40 bg-gray-700 rounded animate-pulse"></div>
           </div>
 
-          {/* Lista de horários */}
-          <div className="space-y-2">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="flex justify-between items-center pt-2">
-                <div className="h-4 w-32 bg-gray-600 rounded"></div>
-                <div className="h-6 w-20 bg-gray-700 rounded"></div>
+          {/* Barra de busca */}
+          <div className="h-11 w-full bg-gray-800 rounded-lg animate-pulse"></div>
+
+          {/* Skeleton de vários dias */}
+          <div className="space-y-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="bg-gray-800 border border-gray-700 rounded-md p-5 space-y-4 animate-pulse"
+              >
+                {/* Cabeçalho do dia */}
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-52 bg-gray-600 rounded"></div>
+                  <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                </div>
+
+                {/* Lista de horários */}
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="flex justify-between items-center pt-2">
+                      <div className="h-4 w-32 bg-gray-600 rounded"></div>
+                      <div className="h-6 w-20 bg-gray-700 rounded"></div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      ))}
-    </div>
 
-  </div>
-) : (
+        </div>
+      ) : (
 
 
 
@@ -958,9 +975,6 @@ export default function AgendaScreen() {
 
 
 
-
-
-
               {/* PAGINAÇÃO — TOPO (uma vez só) */}
               {totalPaginas > 1 && (
                 <Pagination
@@ -969,7 +983,11 @@ export default function AgendaScreen() {
                   onChange={goToPage}
                 />
 
+
+
               )}
+
+              <div className="mt-4"></div>
 
               {/* DIAS PAGINADOS */}
               {diasPaginados.map((dia) => {
@@ -979,124 +997,153 @@ export default function AgendaScreen() {
                 );
 
                 return (
-                  <div key={dia} className="border rounded-md p-4 bg-gray-800">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="flex items-center gap-6 justify-between font-semibold text-sm text-white">
-                          <span className="flex items-center gap-2"></span>
-                          <CalendarCheck className="text-white" size={20} />
+
+                  // HEADER DOS DIAS //
+                  <div key={dia} className="bg-gray-800 border border-gray-700 rounded-md p-3 mb-2 px-3">
+
+                    <div
+                      className="flex items-center justify-between cursor-pointer mb-2"
+                      onClick={() => toggleDia(dia)}
+                    >
+                      <div className="flex items-center gap-2 select-none">
+                        <CalendarCheck className="text-white" size={17} />
+                        <h3 className="font-semibold text-sm text-white">
                           {formatarDataCompleta(dia)}
                         </h3>
-
-                        {podeOcultar && (
-                          <button
-                            onClick={() => {
-                              setDiaParaRemoverDefinitivo(dia);
-                              setConfirmDeleteDefinitivoOpen(true);
-                            }}
-                            className="text-red-400 hover:text-red-500 text-xs font-semibold px-2 py-1 rounded transition hover:bg-red-500/10"
-                            title="Apagar definitivamente este dia e todos os slots"
-                          >
-                            Deletar
-                          </button>
-                        )}
+                        <span className="text-white text-sm ml-">
+                          {diasAbertos[dia] ? "▲" : "▼"}
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <AdicionarHorarioButton
-                          dia={dia}
-                          onAdd={adicionarHorario}
-                          notify={notify}
-                          diaComInputAberto={diaComInputAberto}
-                          setDiaComInputAberto={setDiaComInputAberto}
-                        />
-
-                        {diaComInputAberto !== dia && (
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const existeOcupado = slotsDoDia.some(
-                                (s) => s.status === "ocupado"
-                              );
-                              if (existeOcupado) {
-                                setModalBloqueioDia(true);
-                                return;
-                              }
-                              setDiaParaExcluir(dia);
-                              setConfirmDeleteDayOpen(true);
-                            }}
-                            className="!text-xs !px-3 !py-2 !border !border-transparent !bg-white !text-gray-950 hover:!bg-red-100 !max-w-[150px] truncate"
-                          >
-                            Cancelar todos
-                          </Button>
-                        )}
-                      </div>
+                      {podeOcultar && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDiaParaRemoverDefinitivo(dia);
+                            setConfirmDeleteDefinitivoOpen(true);
+                          }}
+                          className="text-red-400 hover:text-red-500 text-xs font-semibold px-2 py-1 rounded transition hover:bg-red-500/10"
+                          title="Apagar definitivo"
+                        >
+                          Deletar
+                        </button>
+                      )}
                     </div>
 
-                    <ul className="divide-y">
-                      {slotsDoDia.length ? (
-                        slotsDoDia.map((slot) => (
-                          <li key={slot.id} className="py-2 flex justify-between items-center">
-                            <span
+                    {/* QUANDO ABERTO — TUDO DENTRO DO CARD */}
+                    {diasAbertos[dia] && (
+                      <>
+                        <div
+                          className="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-2 mb-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <AdicionarHorarioButton
+                            dia={dia}
+                            onAdd={adicionarHorario}
+                            notify={notify}
+                            diaComInputAberto={diaComInputAberto}
+                            setDiaComInputAberto={setDiaComInputAberto}
+                          />
+
+                          {diaComInputAberto !== dia && (
+                            <Button
+                              type="button"
                               onClick={() => {
-                                if (slot.status !== "ocupado") return;
-                                const consultaId = slot.appointmentId;
-                                if (!consultaId) {
-                                  notify("Este horário ocupado não possui appointmentId.", "error");
+                                const existeOcupado = slotsDoDia.some(s => s.status === "ocupado");
+                                if (existeOcupado) {
+                                  setModalBloqueioDia(true);
                                   return;
                                 }
-                                const basePath =
-                                  role === "admin"
-                                    ? `/medico/consultas/${medicoId}`
-                                    : "/medico/consultas";
-                                const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
-                                window.open(url, "_blank", "noopener,noreferrer");
+                                setDiaParaExcluir(dia);
+                                setConfirmDeleteDayOpen(true);
                               }}
-                              className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""} text-white font-medium`}
+                              className="!text-xs !px-5 !py-2 !border !border-transparent !bg-gray-700 !text-white hover:!bg-yellow-400 whitespace-nowrap flex-shrink"
                             >
-                              {slot.hora} - {" "}
-                              <b
-                                className={
-                                  slot.status === "ocupado"
-                                    ? "text-blue-600"
-                                    : slot.status === "livre"
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                }
-                              >
-                                {slot.status}
-                              </b>
-                            </span>
+                              Cancelar todos horários
+                            </Button>
+                          )}
+                        </div>
 
-                            {slot.status === "cancelado" ? (
-                              <button
-                                onClick={() => reabrirSlot(slot.id)}
-                                disabled={reabrindoId === slot.id}
-                                className={`text-sm flex items-center gap-1 ${reabrindoId === slot.id
-                                  ? "text-gray-400 cursor-not-allowed"
-                                  : "text-white hover:underline"
-                                  }`}
-                              >
-                                {reabrindoId === slot.id ? "Reabrindo..." : "Reabrir"}
-                              </button>
-                            ) : slot.status === "ocupado" ? null : (
-                              <button
-                                onClick={() => {
-                                  setConfirmOpen(true);
-                                  setConfirmTargetId(slot.id);
-                                }}
-                                className="text-sm text-red-500 hover:underline"
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                          </li>
-                        ))
-                      ) : (
-                        <li className="text-sm text-gray-500 italic">Nenhum horário ainda.</li>
-                      )}
-                    </ul>
+
+                        <ul className="divide-y">
+                          {slotsDoDia.length ? (
+                            slotsDoDia.map((slot) => (
+                              <li key={slot.id} className="py-2 flex justify-between items-center">
+
+                                <span
+                                  onClick={() => {
+                                    if (slot.status !== "ocupado") return;
+
+                                    const consultaId = slot.appointmentId;
+                                    if (!consultaId) {
+                                      notify("Este horário ocupado não possui appointmentId.", "error");
+                                      return;
+                                    }
+
+                                    const basePath =
+                                      role === "admin"
+                                        ? `/medico/consultas/${medicoId}`
+                                        : "/medico/consultas";
+
+                                    const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
+
+                                    window.open(url, "_blank", "noopener,noreferrer");
+                                  }}
+                                  className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""} text-white font-medium`}
+                                >
+                                  {slot.hora} -{" "}
+                                  <b
+                                    className={
+                                      slot.status === "ocupado"
+                                        ? "text-blue-600"
+                                        : slot.status === "livre"
+                                          ? "text-white"
+                                          : "text-red-600"
+                                    }
+                                  >
+                                    {slot.status}
+                                  </b>
+                                </span>
+
+
+                                {slot.status === "cancelado" ? (
+                                  <button
+                                    onClick={() => reabrirSlot(slot.id)}
+                                    disabled={reabrindoId === slot.id}
+                                    className={`text-sm flex items-center gap-1 ${reabrindoId === slot.id
+                                      ? "text-gray-400 cursor-not-allowed"
+                                      : "text-white hover:underline"
+                                      }`}
+                                  >
+                                    {reabrindoId === slot.id ? "Reabrindo..." : "Reabrir"}
+                                  </button>
+                                ) : slot.status === "ocupado" ? null : (
+                                  <button
+                                    onClick={() => {
+                                      setConfirmOpen(true);
+                                      setConfirmTargetId(slot.id);
+                                    }}
+                                    className="text-sm text-white hover:underline"
+                                  >
+                                    Cancelar
+                                  </button>
+                                )}
+
+                              </li>
+                            ))
+                          ) : (
+                            <li className="text-sm text-gray-500 italic">Nenhum horário ainda.</li>
+                          )}
+                        </ul>
+
+
+
+
+                      </>
+                    )}
+
                   </div>
+
                 );
               })}
 
@@ -1114,31 +1161,28 @@ export default function AgendaScreen() {
 
 
 
-
-
         </div>
       )}
 
+
+
+      {/* MODAIS */}
       <GerarSlotsModal
         open={showGerador}
         onClose={() => setShowGerador(false)}
         onGenerate={criarVariosSlots}
       />
 
-
-
       <ConfirmModal
         open={confirmDeleteDayOpen}
-        title="Excluir dia inteiro"
-        message="Tem certeza? Todos os horários deste dia serão cancelados (livres e ocupados)."
+        title="Cancelar todos horários"
+        message="Tem certeza? Todos os horários deste dia serão cancelados."
         confirmText="Excluir dia"
         cancelText="Voltar"
         loading={deletingDay}
         onConfirm={() => excluirDiaCompleto(diaParaExcluir)}
         onClose={() => !deletingDay && setConfirmDeleteDayOpen(false)}
       />
-
-
 
       <ConfirmModal
         open={confirmOpen}
@@ -1151,7 +1195,6 @@ export default function AgendaScreen() {
         loading={confirmLoading}
       />
 
-
       <ConfirmModal
         open={confirmDeleteDefinitivoOpen}
         title="Remover definitivamente"
@@ -1160,64 +1203,20 @@ export default function AgendaScreen() {
         cancelText="Cancelar"
         loading={removendoDefinitivo}
         onConfirm={confirmarRemocaoDefinitiva}
-        onClose={() =>
-          !removendoDefinitivo && setConfirmDeleteDefinitivoOpen(false)
-        }
+        onClose={() => !removendoDefinitivo && setConfirmDeleteDefinitivoOpen(false)}
       />
-
 
       {modalAppointmentOpen && appointmentSelecionado && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[300]">
-          <div className="bg-white p-6 rounded-xl shadow-xl w-[90%] max-w-lg">
-
-            <h3 className="text-xl font-semibold mb-3 text-gray-900">
-              Consulta — {appointmentSelecionado.pacienteNome}
-            </h3>
-
-            <p className="text-gray-700 text-sm mb-1">
-              <b>Data:</b> {appointmentSelecionado.data}
-            </p>
-            <p className="text-gray-700 text-sm mb-1">
-              <b>Horário:</b> {appointmentSelecionado.hora}
-            </p>
-            <p className="text-gray-700 text-sm mb-1">
-              <b>Tipo:</b> {appointmentSelecionado.tipo}
-            </p>
-
-            <div className="mt-5 flex flex-col gap-2">
-              <button className="bg-green-600 text-white py-2 rounded hover:bg-green-700">
-                Concluir consulta
-              </button>
-
-              <button className="bg-red-600 text-white py-2 rounded hover:bg-red-700">
-                Cancelar consulta
-              </button>
-
-              <button className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
-                Agendar retorno
-              </button>
-
-              <button className="bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600">
-                Remarcar retorno
-              </button>
-
-              <button
-                onClick={() => setModalAppointmentOpen(false)}
-                className="bg-gray-300 text-gray-800 py-2 rounded hover:bg-gray-400 mt-2"
-              >
-                Fechar
-              </button>
-            </div>
-
-          </div>
+          {/* conteúdo */}
         </div>
       )}
-
-
-
     </>
   );
-}
+}   // fecha AgendaScreen SÓ UMA VEZ
+
+
+
 
 // Adicionar Horário 
 
@@ -1270,7 +1269,7 @@ function AdicionarHorarioButton({
           setHora("");
           setDiaComInputAberto(dia)
         }}
-        className="!text-xs !px-5 !py-2 !border !border-transparent !bg-white !text-gray-950 hover:!bg-green-100 whitespace-nowrap flex-shrink"
+        className="!text-xs !px-5 !py-2 !border !border-transparent !bg-gray-700 !text-white hover:!bg-yellow-400 whitespace-nowrap flex-shrink"
       >
         Adicionar horário
       </Button>
