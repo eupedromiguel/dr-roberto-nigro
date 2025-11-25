@@ -1035,7 +1035,7 @@ export default function AgendaScreen() {
                                 disabled={reabrindoId === slot.id}
                                 className={`text-sm flex items-center gap-1 ${reabrindoId === slot.id
                                   ? "text-gray-400 cursor-not-allowed"
-                                  : "text-gray-950 hover:underline"
+                                  : "text-white hover:underline"
                                   }`}
                               >
                                 {reabrindoId === slot.id ? "Reabrindo..." : "Reabrir"}
@@ -1342,106 +1342,106 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
 
 
   function gerarPreview() {
-  setPreviewError("");
-  setFinalError("");
+    setPreviewError("");
+    setFinalError("");
 
-  if (intervalo < 30) {
-    setPreviewError("O intervalo deve ser maior que 30 minutos.");
-    return;
-  }
-
-  if (!dataInicio || !dataFim) {
-    setPreviewError("Selecione as datas de início e fim.");
-    return;
-  }
-
-  // ==================================================
-  // CONVERSÃO SEGURA DE DATAS (sem UTC)
-  // ==================================================
-  const [iY, iM, iD] = dataInicio.split("-").map(Number);
-  const [fY, fM, fD] = dataFim.split("-").map(Number);
-
-  const dtInicio = new Date(iY, iM - 1, iD);
-  const dtFim = new Date(fY, fM - 1, fD);
-  const hoje = new Date();
-
-  // ==================================================
-  // Bloqueio de datas passadas (comparação ISO real)
-  // ==================================================
-  const hojeISO = todayStr(); // já está YYYY-MM-DD
-
-  const inicioISO = `${iY}-${String(iM).padStart(2, "0")}-${String(iD).padStart(2, "0")}`;
-
-  if (inicioISO < hojeISO) {
-    setPreviewError("Não é permitido gerar horários em dias que já passaram.");
-    return;
-  }
-
-  if (dtFim < dtInicio) {
-    setPreviewError("A data final deve ser igual ou maior que a inicial.");
-    return;
-  }
-
-  const resultado = [];
-
-  const diasSemanaMap = {
-    0: "dom",
-    1: "seg",
-    2: "ter",
-    3: "qua",
-    4: "qui",
-    5: "sex",
-    6: "sab"
-  };
-
-  // ==================================================
-  // CURSOR SEM PROBLEMAS DE TIMEZONE
-  // ==================================================
-  let cursor = new Date(iY, iM - 1, iD);
-
-  while (cursor.getTime() <= dtFim.getTime()) {
-    const diaSemana = diasSemanaMap[cursor.getDay()];
-
-    if (diasSemana[diaSemana]) {
-      let [h, m] = horaInicio.split(":").map(Number);
-      const [endH, endM] = horaFim.split(":").map(Number);
-
-      let atualMin = h * 60 + m;
-      const fimMin = endH * 60 + endM;
-
-      while (atualMin <= fimMin) {
-        const hh = String(Math.floor(atualMin / 60)).padStart(2, "0");
-        const mm = String(atualMin % 60).padStart(2, "0");
-        const horaStr = `${hh}:${mm}`;
-
-        // GERA ISO SEM UTC
-        const dataISO =
-          cursor.getFullYear() +
-          "-" +
-          String(cursor.getMonth() + 1).padStart(2, "0") +
-          "-" +
-          String(cursor.getDate()).padStart(2, "0");
-
-        resultado.push({
-          data: dataISO,
-          hora: horaStr
-        });
-
-        atualMin += intervalo;
-      }
+    if (intervalo < 30) {
+      setPreviewError("O intervalo deve ser maior que 30 minutos.");
+      return;
     }
 
-    // SOMA +1 DIA (sem afetar horário)
-    cursor.setDate(cursor.getDate() + 1);
-  }
+    if (!dataInicio || !dataFim) {
+      setPreviewError("Selecione as datas de início e fim.");
+      return;
+    }
 
-  if (resultado.length === 0) {
-    setPreviewError("Nenhum horário válido foi gerado.");
-    return;
-  }
+    // ==================================================
+    // CONVERSÃO SEGURA DE DATAS (sem UTC)
+    // ==================================================
+    const [iY, iM, iD] = dataInicio.split("-").map(Number);
+    const [fY, fM, fD] = dataFim.split("-").map(Number);
 
-  setPreview(resultado);
-}
+    const dtInicio = new Date(iY, iM - 1, iD);
+    const dtFim = new Date(fY, fM - 1, fD);
+    const hoje = new Date();
+
+    // ==================================================
+    // Bloqueio de datas passadas (comparação ISO real)
+    // ==================================================
+    const hojeISO = todayStr(); // já está YYYY-MM-DD
+
+    const inicioISO = `${iY}-${String(iM).padStart(2, "0")}-${String(iD).padStart(2, "0")}`;
+
+    if (inicioISO < hojeISO) {
+      setPreviewError("Não é permitido gerar horários em dias que já passaram.");
+      return;
+    }
+
+    if (dtFim < dtInicio) {
+      setPreviewError("A data final deve ser igual ou maior que a inicial.");
+      return;
+    }
+
+    const resultado = [];
+
+    const diasSemanaMap = {
+      0: "dom",
+      1: "seg",
+      2: "ter",
+      3: "qua",
+      4: "qui",
+      5: "sex",
+      6: "sab"
+    };
+
+    // ==================================================
+    // CURSOR SEM PROBLEMAS DE TIMEZONE
+    // ==================================================
+    let cursor = new Date(iY, iM - 1, iD);
+
+    while (cursor.getTime() <= dtFim.getTime()) {
+      const diaSemana = diasSemanaMap[cursor.getDay()];
+
+      if (diasSemana[diaSemana]) {
+        let [h, m] = horaInicio.split(":").map(Number);
+        const [endH, endM] = horaFim.split(":").map(Number);
+
+        let atualMin = h * 60 + m;
+        const fimMin = endH * 60 + endM;
+
+        while (atualMin <= fimMin) {
+          const hh = String(Math.floor(atualMin / 60)).padStart(2, "0");
+          const mm = String(atualMin % 60).padStart(2, "0");
+          const horaStr = `${hh}:${mm}`;
+
+          // GERA ISO SEM UTC
+          const dataISO =
+            cursor.getFullYear() +
+            "-" +
+            String(cursor.getMonth() + 1).padStart(2, "0") +
+            "-" +
+            String(cursor.getDate()).padStart(2, "0");
+
+          resultado.push({
+            data: dataISO,
+            hora: horaStr
+          });
+
+          atualMin += intervalo;
+        }
+      }
+
+      // SOMA +1 DIA (sem afetar horário)
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (resultado.length === 0) {
+      setPreviewError("Nenhum horário válido foi gerado.");
+      return;
+    }
+
+    setPreview(resultado);
+  }
 
 
 
@@ -1498,10 +1498,12 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
         </div>
 
         {/* DIAS DA SEMANA */}
+
         <div>
           <p className="text-sm font-medium mb-1">Dias da semana:</p>
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {Object.keys(diasSemana).map((d) => (
+
+          <div className="grid grid-cols-6 gap-1 text-center">
+            {["seg", "ter", "qua", "qui", "sex", "sab"].map((d) => (
               <button
                 key={d}
                 className={`px-2 py-1 border rounded text-sm ${diasSemana[d] ? "bg-yellow-400 text-black" : "bg-gray-200"
@@ -1515,6 +1517,7 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
             ))}
           </div>
         </div>
+
 
         {/* HORÁRIOS */}
         <div className="grid grid-cols-3 gap-4">
