@@ -249,7 +249,7 @@ export default function PerfilScreen() {
       await atualizar({ email: novoEmail });
 
       setMensagemModal(
-        "✅ E-mail atualizado com sucesso! Um aviso foi enviado ao e-mail antigo por segurança."
+        "E-mail atualizado com sucesso! Um aviso foi enviado ao e-mail antigo por segurança."
       );
 
       await logout();

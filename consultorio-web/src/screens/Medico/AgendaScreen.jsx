@@ -7,6 +7,7 @@ import { IMaskInput } from "react-imask";
 import { useAuth } from "../../context/AuthContext";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
+import {CalendarCheck} from "lucide-react"
 
 
 
@@ -957,8 +958,10 @@ export default function AgendaScreen() {
                   <div key={dia} className="border rounded-md p-4 bg-gray-800">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2 gap-2">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-white">
-                          📅 {formatarDataCompleta(dia)}
+                        <h3 className="flex items-center gap-6 justify-between font-semibold text-sm text-white">
+                          <span className="flex items-center gap-2"></span>
+                          <CalendarCheck className="text-white" size={20}/>
+                        {formatarDataCompleta(dia)}
                         </h3>
 
                         {podeOcultar && (
