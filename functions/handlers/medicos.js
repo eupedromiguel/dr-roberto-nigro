@@ -430,3 +430,152 @@ exports.medicosbuscarAppointmentPorSlot = onCall(async (request) => {
     throw new HttpsError("internal", "Erro ao buscar appointment.");
   }
 });
+
+/**
+ * ==========================================================
+ * Criar vários slots
+ * ==========================================================
+ */
+
+exports.criarVariosSlots = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado.");
+  }
+
+  const role = request.auth.token.role;
+  const uid = request.auth.uid;
+
+  const { medicoId, slots } = request.data || {};
+
+  if (!Array.isArray(slots) || slots.length === 0) {
+    throw new HttpsError("invalid-argument", "A lista de slots é obrigatória.");
+  }
+
+  // Médico só pode criar os seus slots
+  const targetId = role === "doctor" ? uid : medicoId;
+  if (!targetId) {
+    throw new HttpsError(
+      "invalid-argument",
+      "O campo 'medicoId' é obrigatório para administradores."
+    );
+  }
+
+  // ======================================================
+  // 1) Carregar todos os slots existentes do médico
+  // ======================================================
+  const existentesSnap = await db
+    .collection("availability_slots")
+    .where("medicoId", "==", targetId)
+    .get();
+
+  // Criar mapa rápido -> chave "DD-MM-YYYY|HH:mm"
+  const mapa = new Map();
+  existentesSnap.forEach((doc) => {
+    const d = doc.data();
+    mapa.set(`${d.data}|${d.hora}`, {
+      id: doc.id,
+      status: d.status,
+    });
+  });
+
+  // ======================================================
+  // 2) Preparar variáveis e batch
+  // ======================================================
+  const batch = db.batch();
+  let criados = 0;
+  let ignorados = 0;
+  let falharam = 0;
+
+  const agora = new Date();
+  const hojeISO = agora.toISOString().split("T")[0];
+  const horaAtual = `${String(agora.getHours()).padStart(2, "0")}:${String(
+    agora.getMinutes()
+  ).padStart(2, "0")}`;
+
+  // ======================================================
+  // 3) Processar lista de slots
+  // ======================================================
+  for (const s of slots) {
+    try {
+      // Entrada: YYYY-MM-DD
+      const partes = s.data.split("-");
+      if (partes.length !== 3) {
+        falharam++;
+        continue;
+      }
+
+      const ano = partes[0]; // YYYY
+      const mes = partes[1]; // MM
+      const dia = partes[2]; // DD
+
+      // Para validação de passado → usar ISO
+      const dataISO = `${ano}-${mes}-${dia}`;
+
+      const hora = s.hora;
+
+      // Ignorar horários passados
+      if (dataISO < hojeISO || (dataISO === hojeISO && hora <= horaAtual)) {
+        ignorados++;
+        continue;
+      }
+
+      // Formato PADRÃO do Firestore (igual outras funções): DD-MM-YYYY
+      const dataDDMMYYYY = `${dia}-${mes}-${ano}`;
+
+      const chave = `${dataDDMMYYYY}|${hora}`;
+      const existente = mapa.get(chave);
+
+      // -----------------------------------------
+      // Se já existe
+      // -----------------------------------------
+      if (existente) {
+        if (existente.status === "cancelado") {
+          // Cancelado → reativar
+          batch.update(
+            db.collection("availability_slots").doc(existente.id),
+            {
+              status: "livre",
+              atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+            }
+          );
+          criados++;
+        } else {
+          // livre / ocupado → ignorar
+          ignorados++;
+        }
+        continue;
+      }
+
+      // -----------------------------------------
+      // Criar slot novo
+      // -----------------------------------------
+      const docRef = db.collection("availability_slots").doc();
+      batch.set(docRef, {
+        medicoId: targetId,
+        data: dataDDMMYYYY,
+        hora: hora,
+        status: "livre",
+        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      criados++;
+    } catch (err) {
+      console.error("Erro ao processar slot:", err);
+      falharam++;
+    }
+  }
+
+  // ======================================================
+  // 4) Commit final
+  // ======================================================
+  await batch.commit();
+
+  return {
+    sucesso: true,
+    criados,
+    ignorados,
+    falharam,
+  };
+});
+

@@ -7,7 +7,7 @@ import { IMaskInput } from "react-imask";
 import { useAuth } from "../../context/AuthContext";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
-import {CalendarCheck} from "lucide-react"
+import { CalendarCheck } from "lucide-react"
 
 
 
@@ -488,7 +488,6 @@ export default function AgendaScreen() {
 
       await removerDiaCompletoDefinitivo(diaParaRemoverDefinitivo);
 
-      notify("Dia removido definitivamente.", "success");
     } catch (e) {
       console.error(e);
       notify("Erro ao remover dia.", "error");
@@ -608,81 +607,66 @@ export default function AgendaScreen() {
       return;
     }
     try {
-    const criarFn = httpsCallable(functions, "medicos-criarSlot");
-    const res = await criarFn({ medicoId, data: dia, hora });
+      const criarFn = httpsCallable(functions, "medicos-criarSlot");
+      const res = await criarFn({ medicoId, data: dia, hora });
 
-    if (res.data?.sucesso) {
-      notify(`Horário ${hora} adicionado em ${formatarDataCompleta(dia)}.`, "success");
-      await carregarSlots();
-      return;
+      if (res.data?.sucesso) {
+        notify(`Horário ${hora} adicionado em ${formatarDataCompleta(dia)}.`, "success");
+        await carregarSlots();
+        return;
+      }
+
+      // Mensagem específica do backend
+      const msg = res.data?.mensagem || "";
+
+      if (msg.includes("Já existe um slot para este dia e hora")) {
+        notify(`O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
+        return;
+      }
+
+      if (msg.includes("Slot reaberto com sucesso")) {
+        notify(`O horário ${hora} foi reaberto com sucesso.`, "success");
+        await carregarSlots();
+        return;
+      }
+
+      notify(msg || "Erro ao criar horário.", "error");
+
+    } catch (err) {
+      console.error("Erro ao criar:", err);
+
+      if (err.code === "already-exists") {
+        notify(`O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
+        return;
+      }
+
+      if (err.code === "failed-precondition") {
+        notify("Não é permitido criar horário no passado.", "error");
+        return;
+      }
+
+      notify(err.message || "Erro ao criar horário.", "error");
     }
 
-    // Mensagem específica do backend
-    const msg = res.data?.mensagem || "";
-
-    if (msg.includes("Já existe um slot para este dia e hora")) {
-      notify(`⚠ O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
-      return;
-    }
-
-    if (msg.includes("Slot reaberto com sucesso")) {
-      notify(`♻️ O horário ${hora} foi reaberto com sucesso.`, "success");
-      await carregarSlots();
-      return;
-    }
-
-    notify(msg || "Erro ao criar horário.", "error");
-
-  } catch (err) {
-  console.error("Erro ao criar:", err);
-
-  if (err.code === "already-exists") {
-    notify(`⚠ O horário ${hora} já existe em ${formatarDataCompleta(dia)}.`, "error");
-    return;
   }
-
-  if (err.code === "failed-precondition") {
-    notify("Não é permitido criar horário no passado.", "error");
-    return;
-  }
-
-  notify(err.message || "Erro ao criar horário.", "error");
-}
-
-}
-
 
   async function criarVariosSlots(lista) {
     try {
-      const criarFn = httpsCallable(functions, "medicos-criarSlot");
+      const criarVariosFn = httpsCallable(functions, "medicos-criarVariosSlots");
 
-      let okCount = 0;
-      let skipCount = 0;
-      let failCount = 0;
+      const res = await criarVariosFn({
+        medicoId,
+        slots: lista.map((s) => ({
+          data: s.data,  // YYYY-MM-DD vindo do gerador
+          hora: s.hora   // HH:mm
+        }))
+      });
 
-      for (const item of lista) {
-        try {
-          const res = await criarFn({
-            medicoId,
-            data: item.data,
-            hora: item.hora
-          });
-
-          if (res.data?.mensagem?.includes("já existe")) {
-            skipCount++;
-            continue;
-          }
-
-
-          okCount++;
-        } catch {
-          failCount++;
-        }
-      }
+      const { criados, ignorados, falharam } = res.data;
 
       notify(
-        `${okCount} horários criados. ${skipCount} ignorados (já existiam). ${failCount > 0 ? failCount + " falharam." : ""}`,
-        failCount ? "error" : "success"
+        `${criados} criados • ${ignorados} ignorados • ${falharam} falharam`,
+        falharam ? "error" : "success"
       );
 
       await carregarSlots();
@@ -693,6 +677,7 @@ export default function AgendaScreen() {
       notify("Erro ao gerar múltiplos horários.", "error");
     }
   }
+
 
 
 
@@ -960,8 +945,8 @@ export default function AgendaScreen() {
                       <div className="flex items-center gap-2">
                         <h3 className="flex items-center gap-6 justify-between font-semibold text-sm text-white">
                           <span className="flex items-center gap-2"></span>
-                          <CalendarCheck className="text-white" size={20}/>
-                        {formatarDataCompleta(dia)}
+                          <CalendarCheck className="text-white" size={20} />
+                          {formatarDataCompleta(dia)}
                         </h3>
 
                         {podeOcultar && (
@@ -1357,92 +1342,107 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
 
 
   function gerarPreview() {
-    setPreviewError("");
-    setFinalError("");
+  setPreviewError("");
+  setFinalError("");
 
-
-    if (intervalo < 30) {
-      setPreviewError("O intervalo deve ser maior que 30 minutos.");
-      return;
-    }
-
-
-    if (!dataInicio || !dataFim) {
-      setPreviewError("Selecione as datas de início e fim.");
-      return;
-    }
-
-    const dtInicio = new Date(dataInicio);
-    const dtFim = new Date(dataFim);
-    const hoje = new Date();
-
-    if (dtInicio < new Date(todayStr())) {
-      setPreviewError("Não é permitido gerar horários em dias que já passaram.");
-      return;
-    }
-
-    if (dtFim < dtInicio) {
-      setPreviewError("A data final deve ser igual ou maior que a inicial.");
-      return;
-    }
-
-    const resultado = [];
-
-    const diasSemanaMap = {
-      0: "dom",
-      1: "seg",
-      2: "ter",
-      3: "qua",
-      4: "qui",
-      5: "sex",
-      6: "sab"
-    };
-
-    const cursor = new Date(dtInicio);
-
-
-    while (cursor <= dtFim) {
-      const diaSemana = diasSemanaMap[cursor.getDay()];
-
-      if (diasSemana[diaSemana]) {
-        let [h, m] = horaInicio.split(":").map(Number);
-        const [endH, endM] = horaFim.split(":").map(Number);
-
-        let atualMin = h * 60 + m;
-        const fimMin = endH * 60 + endM;
-
-        while (atualMin < fimMin) {
-          const hh = String(Math.floor(atualMin / 60)).padStart(2, "0");
-          const mm = String(atualMin % 60).padStart(2, "0");
-          const horaStr = `${hh}:${mm}`;
-
-          const dataISO = cursor.toLocaleDateString("sv-SE"); // yyyy-mm-dd
-
-          // BLOQUEAR horários passados
-          if (isPastDateTime(dataISO, horaStr)) {
-            atualMin += intervalo;
-            continue; // apenas pula, não gera erro
-          }
-
-          resultado.push({
-            data: dataISO,
-            hora: horaStr
-          });
-
-          atualMin += intervalo;
-        }
-      }
-
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    if (resultado.length === 0) {
-      setPreviewError("Nenhum horário válido foi gerado.");
-      return;
-    }
-
-    setPreview(resultado);
+  if (intervalo < 30) {
+    setPreviewError("O intervalo deve ser maior que 30 minutos.");
+    return;
   }
+
+  if (!dataInicio || !dataFim) {
+    setPreviewError("Selecione as datas de início e fim.");
+    return;
+  }
+
+  // ==================================================
+  // CONVERSÃO SEGURA DE DATAS (sem UTC)
+  // ==================================================
+  const [iY, iM, iD] = dataInicio.split("-").map(Number);
+  const [fY, fM, fD] = dataFim.split("-").map(Number);
+
+  const dtInicio = new Date(iY, iM - 1, iD);
+  const dtFim = new Date(fY, fM - 1, fD);
+  const hoje = new Date();
+
+  // ==================================================
+  // Bloqueio de datas passadas (comparação ISO real)
+  // ==================================================
+  const hojeISO = todayStr(); // já está YYYY-MM-DD
+
+  const inicioISO = `${iY}-${String(iM).padStart(2, "0")}-${String(iD).padStart(2, "0")}`;
+
+  if (inicioISO < hojeISO) {
+    setPreviewError("Não é permitido gerar horários em dias que já passaram.");
+    return;
+  }
+
+  if (dtFim < dtInicio) {
+    setPreviewError("A data final deve ser igual ou maior que a inicial.");
+    return;
+  }
+
+  const resultado = [];
+
+  const diasSemanaMap = {
+    0: "dom",
+    1: "seg",
+    2: "ter",
+    3: "qua",
+    4: "qui",
+    5: "sex",
+    6: "sab"
+  };
+
+  // ==================================================
+  // CURSOR SEM PROBLEMAS DE TIMEZONE
+  // ==================================================
+  let cursor = new Date(iY, iM - 1, iD);
+
+  while (cursor.getTime() <= dtFim.getTime()) {
+    const diaSemana = diasSemanaMap[cursor.getDay()];
+
+    if (diasSemana[diaSemana]) {
+      let [h, m] = horaInicio.split(":").map(Number);
+      const [endH, endM] = horaFim.split(":").map(Number);
+
+      let atualMin = h * 60 + m;
+      const fimMin = endH * 60 + endM;
+
+      while (atualMin <= fimMin) {
+        const hh = String(Math.floor(atualMin / 60)).padStart(2, "0");
+        const mm = String(atualMin % 60).padStart(2, "0");
+        const horaStr = `${hh}:${mm}`;
+
+        // GERA ISO SEM UTC
+        const dataISO =
+          cursor.getFullYear() +
+          "-" +
+          String(cursor.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(cursor.getDate()).padStart(2, "0");
+
+        resultado.push({
+          data: dataISO,
+          hora: horaStr
+        });
+
+        atualMin += intervalo;
+      }
+    }
+
+    // SOMA +1 DIA (sem afetar horário)
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  if (resultado.length === 0) {
+    setPreviewError("Nenhum horário válido foi gerado.");
+    return;
+  }
+
+  setPreview(resultado);
+}
+
 
 
   return (
@@ -1543,7 +1543,6 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
             <IMaskInput
               mask={Number}
               scale={0}
-              signed={false}
               min={30}
               max={60}
               thousandsSeparator=""
