@@ -47,7 +47,7 @@ export default function SidebarAdmin() {
       {/* DESKTOP SIDEBAR FIXA */}
       {/* ====================== */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 bg-gray-800 border-r border-gray-800 flex-col">
-        <div className="p-4 border-b border-gray-800 text-white text-lg font-bold">
+        <div className="p-4 border-b border-gray-800 text-yellow-400 text-lg font-light">
           Painel Administrativo
         </div>
 
@@ -73,7 +73,7 @@ export default function SidebarAdmin() {
       {/* ====================== */}
       <nav className="md:hidden fixed top-0 left-0 right-0 bg-gray-800 border-b border-gray-800 z-50">
         <div className="flex items-center justify-between px-4 py-2">
-          <h1 className="absolute left-1/2 transform -translate-x-1/2 text-white font-normal text-lg text-center">
+          <h1 className="absolute left-1/2 transform -translate-x-1/2 text-yellow-400 font-light text-lg text-center">
             Painel Administrativo
           </h1>
 

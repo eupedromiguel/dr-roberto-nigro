@@ -79,7 +79,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-5 py-3 flex justify-between items-center">
         <Link
           to="/"
-          className="flex items-center gap-2 font-ubuntu text-xl tracking-wide hover:opacity-50 transition"
+          className="flex items-center gap-2 font-light text-xl tracking-wide hover:opacity-50 transition"
         >
 
           <span>Clínica Dr. Roberto Nigro</span>
