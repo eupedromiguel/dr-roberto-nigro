@@ -992,6 +992,12 @@ export default function AgendaScreen() {
               {/* DIAS PAGINADOS */}
               {diasPaginados.map((dia) => {
                 const slotsDoDia = slotsPorData[dia] || [];
+                const totalCancelados = slotsDoDia.filter(s => s.status === "cancelado").length;
+                const totalOcupados = slotsDoDia.filter(s => s.status === "ocupado").length;
+                const totalLivres = slotsDoDia.filter(s => s.status === "livre").length;
+                const totalGeral = slotsDoDia.length;
+
+
                 const podeOcultar = slotsDoDia.every(
                   (s) => s.status === "livre" || s.status === "cancelado"
                 );
@@ -1010,9 +1016,28 @@ export default function AgendaScreen() {
                         <h3 className="font-semibold text-sm text-white">
                           {formatarDataCompleta(dia)}
                         </h3>
-                        <span className="text-white text-sm ml-">
-                          {diasAbertos[dia] ? "▲" : "▼"}
-                        </span>
+                        <div className="flex items-center gap-4 relative group">
+
+
+
+                          {/* CONTADORES */}
+                          {!diasAbertos[dia] && totalOcupados > 0 && (
+                            <div
+                              className="flex items-center gap-3 text-sm font-semibold"
+                              title={`Cancelados: ${totalCancelados} • Ocupados: ${totalOcupados} • Livres: ${totalLivres}`}
+                            >
+
+                              <span className="text-blue-500">
+                                {String(totalOcupados).padStart(2, "0")}
+                              </span>
+
+                            </div>
+                          )}
+
+
+
+                        </div>
+
                       </div>
 
                       {podeOcultar && (
@@ -1561,22 +1586,26 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <p className="text-sm font-medium">Hora início:</p>
-            <input
-              type="time"
+            <IMaskInput
+              mask="00:00"
               value={horaInicio}
-              onChange={(e) => setHoraInicio(e.target.value)}
+              onAccept={(v) => setHoraInicio(v)}
+              placeholder="HH:MM"
               className="w-full border px-2 py-1 rounded"
             />
+
           </div>
 
           <div>
             <p className="text-sm font-medium">Hora fim:</p>
-            <input
-              type="time"
+            <IMaskInput
+              mask="00:00"
               value={horaFim}
-              onChange={(e) => setHoraFim(e.target.value)}
+              onAccept={(v) => setHoraFim(v)}
+              placeholder="HH:MM"
               className="w-full border px-2 py-1 rounded"
             />
+
           </div>
 
           <div>
@@ -1705,7 +1734,7 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
               </svg>
             )}
 
-            {creating ? "Criando horários..." : "Confirmar criação"}
+            {creating ? "Criando horários..." : "Confirmar"}
           </button>
 
 
