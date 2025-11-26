@@ -21,12 +21,14 @@ const consultas = require("./handlers/consultas");
 const medicos   = require("./handlers/medicos");
 const adminMod  = require("./handlers/adminFunctions");
 const notificacoes  = require("./handlers/notificacoes");
+const relatorios = require("./handlers/relatorios")
 
 // Namespaces (ponto)
 exports.usuarios  = usuarios;
 exports.consultas = consultas;
 exports.medicos   = medicos;
 exports.admin     = adminMod;
+exports.logAppointmentStatus = relatorios.logAppointmentStatus;
 
 // Função de saúde mínima para validar carregamento
 exports.health = {

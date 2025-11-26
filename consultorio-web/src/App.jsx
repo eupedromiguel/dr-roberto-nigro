@@ -46,6 +46,7 @@ import GerenciarAgendas from "./screens/Admin/GerenciarAgendas";
 import GerenciarPlanos from "./screens/Admin/GerenciarPlanos";
 import GerenciarSlots from "./screens/Admin/GerenciarSlots";
 import Notificacoes from "./screens/Admin/Notificacoes";
+import RelatoriosScreen from "./screens/Admin/RelatoriosScreen";
 
 // ===============================
 // Rotas de controle
@@ -310,6 +311,18 @@ export default function App() {
               path="/admin"
               element={<Navigate to="/admin/usuarios" replace />}
             />
+            
+            <Route
+              path="/admin/relatorios"
+              element={
+                <PrivateRoute roles={["admin"]}>
+                  <PrivateLayout>
+                    <RelatoriosScreen />
+                  </PrivateLayout>
+                </PrivateRoute>
+              }
+            />
+            
 
             {/* ========================================= */}
             {/* PÁGINA NÃO ENCONTRADA */}

@@ -13,6 +13,7 @@ import {
   Hospital,
   Menu,
   MapPin,
+  ChartNoAxesCombined,
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +33,7 @@ export default function SidebarAdmin() {
     { label: "Gerenciar convênios", path: "/admin/planos", icon: IdCardLanyard },
     { label: "Gerenciar agendas", path: "/admin/agendas", icon: CalendarCog },
     { label: "Gerenciar slots", path: "/admin/slots", icon: BetweenHorizontalEnd },
+    { label: "Relatórios", path: "/admin/relatorios", icon: ChartNoAxesCombined },
   ];
 
   const linkClasses = (path) =>

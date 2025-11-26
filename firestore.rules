@@ -10,7 +10,6 @@ service cloud.firestore {
       // VISUALIZAÇÃO:
       // - Admin pode ver tudo
       // - Usuário só vê seus próprios dados
-      // - Pacientes e visitantes NÃO podem ler docs de médicos aqui
       allow read: if 
           (request.auth != null && request.auth.token.role == "admin") ||
           (request.auth != null && request.auth.uid == userId);
@@ -34,11 +33,7 @@ service cloud.firestore {
     // MÉDICOS PÚBLICOS
     // =====================================
     match /medicos_publicos/{id} {
-
-      // Qualquer pessoa pode ver (página pública)
       allow read: if true;
-
-      // Apenas admin pode escrever
       allow write: if request.auth != null &&
                     request.auth.token.role == "admin";
     }
@@ -108,12 +103,35 @@ service cloud.firestore {
       }
     }
 
+    // ===============================
+    // RELATÓRIOS MENSAIS (FINAL)
+    // ===============================
+
+    // appointments_done_YYYY_MM
+    // appointments_canceled_patient_YYYY_MM
+    match /{col}/{docId} {
+      allow read: if request.auth != null
+        && (
+          col.matches('^appointments_done_\\d{4}_\\d{2}$')
+          || col.matches('^appointments_canceled_patient_\\d{4}_\\d{2}$')
+        )
+        && (
+          request.auth.token.role == "admin"
+          || (
+            request.auth.token.role == "doctor"
+            && resource.data.medicoId == request.auth.uid
+          )
+        );
+
+      allow write: if false; // somente Cloud Functions
+    }
+
     // =====================================
     // ADMIN GLOBAL (fallback)
     // =====================================
     match /{document=**} {
-      allow read, create, update: if request.auth != null &&
-                                   request.auth.token.role == "admin";
+      allow read, create, update, delete: if request.auth != null &&
+                                           request.auth.token.role == "admin";
     }
   }
 }
