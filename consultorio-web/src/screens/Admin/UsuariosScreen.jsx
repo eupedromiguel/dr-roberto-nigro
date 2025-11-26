@@ -103,7 +103,7 @@ export default function UsuariosScreen() {
             size={16}
             className={`${recarregando ? "animate-spin" : ""}`}
           />
-          {recarregando ? "Atualizando..." : "Recarregar Lista"}
+          {recarregando ? "Atualizando..." : "Atualizar"}
         </button>
       </div>
 
@@ -113,7 +113,7 @@ export default function UsuariosScreen() {
           <Search className="absolute left-3 top-2.5 text-slate-50" size={18} />
           <input
             type="text"
-            placeholder="Buscar por nome, email ou papel..."
+            placeholder="Buscar por nome ou email"
             className="pl-9 pr-3 py-2 border border-slate-50 rounded-md w-full text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
