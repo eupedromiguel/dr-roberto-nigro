@@ -9,7 +9,7 @@ export default function MainLayout({ children }) {
 
   return (
     <div
-      className={`min-h-screen flex flex-col bg-gray-900 text-slate-900 relative transition-all duration-300 ${
+      className={`min-h-screen flex flex-col bg-gray-900 print:bg-white text-slate-900 relative transition-all duration-300 ${
         isAdmin ? "md:pl-60" : ""
       }`}
     >

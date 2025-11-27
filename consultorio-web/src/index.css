@@ -21,3 +21,174 @@ input[type="time"]::-moz-focus-inner {
 input[type="time"] {
   color-scheme: light;
 }
+
+
+/* ESTILIZAÇÃO DE PDF PARA RELATÓRIO */
+
+/* ============================
+   ESTILO PROFISSIONAL PARA PDF
+   ============================ */
+
+@media print {
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  body {
+    background: white !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+
+  /* Remove elementos de interação */
+  button,
+  select,
+  input {
+    display: none !important;
+  }
+
+  /* Remove sombras e arredondamentos exagerados */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Container do relatório */
+  .print\:bg-white {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print-container {
+    width: 100% !important;
+  }
+
+  /* TÍTULO PRINCIPAL */
+  h1 {
+    text-align: center;
+    font-size: 20px !important;
+    margin-bottom: 6px !important;
+    border-bottom: 2px solid #000;
+    padding-bottom: 4px;
+  }
+
+  /* SUBTÍTULO */
+  .print-subtitle {
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+
+  /* DASHBOARD */
+  .print-dashboard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6mm;
+    margin-bottom: 8mm;
+  }
+
+  .print-card {
+    border: 1px solid #000;
+    padding: 6mm;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .print-card strong {
+    display: block;
+    font-size: 18px;
+    margin-top: 4px;
+  }
+
+  /* TÍTULOS DAS SEÇÕES */
+  h2 {
+    margin-top: 12px;
+    font-size: 14px !important;
+    border-bottom: 1px solid #999;
+    padding-bottom: 3px;
+  }
+
+  /* TABELAS */
+  table {
+    width: 100%;
+    border-collapse: collapse !important;
+    font-size: 10px !important;
+    margin-top: 6px;
+  }
+
+  th {
+    background: #f0f0f0 !important;
+    border: 1px solid #000 !important;
+    padding: 4px;
+  }
+
+  td {
+    border: 1px solid #999 !important;
+    padding: 4px;
+  }
+
+  /* LINHAS ZEBRADAS */
+  tbody tr:nth-child(even) {
+    background: #f9f9f9;
+  }
+
+  /* GRÁFICOS SIMULADOS */
+  .print-chart {
+    margin-top: 6px;
+  }
+
+  .print-bar {
+    height: 6px;
+    background: #000;
+  }
+
+  /* NÃO QUEBRAR TABELA NO MEIO */
+  table,
+  tr,
+  td,
+  th {
+    page-break-inside: avoid !important;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid !important;
+  }
+
+  header,
+  nav,
+  .top-bar,
+  .app-header,
+  .hr,
+  .divider {
+    display: none !important;
+  }
+
+  .rounded-xl {
+    border-radius: 0 !important;
+  }
+
+  /* REMOVE SOMBRA */
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  /* GARANTE FUNDO RETO */
+  .bg-red-200,
+  .bg-green-200,
+  .bg-white {
+    background: #fff !important;
+  }
+
+  /* A BORDA AGORA FICA NO PRÓPRIO TABELA */
+  table {
+    border: 2px solid #000 !important;
+  }
+
+  /* REMOVE BORDA DUPLA DO CONTAINER */
+  .overflow-x-auto {
+    border: none !important;
+    padding: 0 !important;
+  }
+
+
+}
