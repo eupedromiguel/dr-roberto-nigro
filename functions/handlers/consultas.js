@@ -227,11 +227,24 @@ exports.cancelarConsulta = onCall(async (request) => {
     }
 
 
-    // Atualiza o status
+    // Cancelamentos
+
+    let canceledBy = null;
+
+    if (role === "patient") {
+      canceledBy = "patient";
+    } else if (role === "doctor") {
+      canceledBy = "doctor";
+    } else if (role === "admin") {
+      canceledBy = "admin";
+    }
+
     await consultaRef.update({
       status: "cancelada",
+      canceledBy,
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
+
 
     // Libera o slot novamente (se existir)
     if (consulta.slotId) {
@@ -241,7 +254,7 @@ exports.cancelarConsulta = onCall(async (request) => {
       });
     }
 
-    console.log(`🟠 Consulta ${consultaId} marcada como cancelada.`);
+    console.log(`Consulta ${consultaId} marcada como cancelada.`);
     return { sucesso: true, mensagem: "Consulta cancelada com sucesso." };
   } catch (error) {
     console.error("Erro ao cancelar consulta:", error);
@@ -289,10 +302,12 @@ exports.marcarComoConcluida = onCall(async (request) => {
 
     await consultaRef.update({
       status: "concluida",
+      concludedBy: role === "admin" ? "admin" : "doctor",
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`🟢 Consulta ${consultaId} marcada como concluída.`);
+
+    console.log(`Consulta ${consultaId} marcada como concluída.`);
     return {
       sucesso: true,
       mensagem: "Consulta marcada como concluída com sucesso.",
@@ -465,7 +480,7 @@ exports.marcarComoRetorno = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`🔵 Consulta ${consultaId} marcada como retorno pelo médico ${uid}.`);
+    console.log(`Consulta ${consultaId} marcada como retorno pelo médico ${uid}.`);
     return {
       sucesso: true,
       mensagem: "Consulta marcada como retorno com sucesso.",
