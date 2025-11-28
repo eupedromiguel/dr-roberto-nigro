@@ -91,6 +91,29 @@ export default function RelatoriosScreen() {
   const [erro, setErro] = useState("");
   const [appointmentsMap, setAppointmentsMap] = useState({});
   const [buscou, setBuscou] = useState(false);
+  const [openMonth, setOpenMonth] = useState(false);
+  const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
+
+
+
+
+
+
+  function formatarMes(valor) {
+  if (!valor || !valor.includes("-")) return "";
+
+  const [ano, mes] = valor.split("-");
+  const index = Number(mes) - 1;
+
+  const meses = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+
+  if (index < 0 || index > 11) return valor;
+
+  return `${meses[index]} / ${ano}`;
+}
 
 
 
@@ -300,7 +323,7 @@ export default function RelatoriosScreen() {
         "Data consulta",
         "Status",
         "Concluída por / Cancelada por",
-        "Criada em",
+        "Agendado em",
       ]);
 
       concluidas.forEach((c) => {
@@ -453,11 +476,77 @@ export default function RelatoriosScreen() {
             Mês
           </label>
           <input
-            type="month"
-            value={mes}
-            onChange={(e) => setMes(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+            type="text"
+            value={formatarMes(mes)}
+            readOnly
+            placeholder="Selecione mês e ano"
+            onClick={() => setOpenMonth(true)}
+            className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent cursor-pointer"
           />
+
+          {openMonth && (
+  <div
+    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center"
+    onClick={() => setOpenMonth(false)}
+  >
+    <div
+      className="bg-white p-4 rounded-xl w-72"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <button
+          className="text-lg"
+          onClick={() => setAnoSelecionado(a => a - 1)}
+        >
+          ◀
+        </button>
+
+        <span className="font-semibold">{anoSelecionado}</span>
+
+        <button
+          className="text-lg"
+          onClick={() => setAnoSelecionado(a => a + 1)}
+        >
+          ▶
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        {[
+          "Jan","Fev","Mar","Abr","Mai","Jun",
+          "Jul","Ago","Set","Out","Nov","Dez"
+        ].map((m, i) => {
+          const valor = `${anoSelecionado}-${String(i + 1).padStart(2, "0")}`;
+
+          return (
+            <button
+              key={m}
+              onClick={() => {
+                setMes(valor);
+                setOpenMonth(false);
+              }}
+              className="border rounded py-2 text-sm hover:bg-yellow-400"
+            >
+              {m}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={() => setOpenMonth(false)}
+        className="mt-4 text-sm text-gray-500 w-full"
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
+
         </div>
 
         <button
@@ -486,15 +575,11 @@ export default function RelatoriosScreen() {
             </span>
           )}
           {mes && (
-            <span>
-              <b>Mês:</b>{" "}
-              {(() => {
-                const [y, m] = mes.split("-");
-                if (!y || !m) return mes;
-                return `${m}/${y}`;
-              })()}
-            </span>
-          )}
+  <span>
+    <b>Mês:</b> {formatarMes(mes)}
+  </span>
+)}
+
         </div>
       )}
 
