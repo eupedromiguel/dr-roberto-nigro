@@ -96,6 +96,12 @@ export default function RelatoriosScreen() {
   const modoGeral = useMemo(() => medicoId === "__ALL__", [medicoId]);
 
 
+  function pickValor(ap) {
+    if (ap.tipoConsulta === "teleconsulta") {
+      return ap.valorteleConsulta ?? ap.valorConsulta ?? 0;
+    }
+    return ap.valorConsulta ?? 0;
+  }
 
 
   function getNomeMedico(id) {
@@ -103,6 +109,16 @@ export default function RelatoriosScreen() {
   }
 
 
+  function formatMoney(value) {
+    if (value === null || value === undefined || value === "") return "R$ 0,00";
+    const num = Number(value);
+    if (isNaN(num)) return "R$ 0,00";
+
+    return num.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
 
 
   function formatarMes(valor) {
@@ -366,6 +382,44 @@ export default function RelatoriosScreen() {
       ? Math.max(...atendimentosPorDia.map((d) => d.total))
       : 0;
 
+
+  // ======================================
+  // CALCULAR A RECEITA TOTAL
+  // ======================================
+
+  const totalReceitaParticular = useMemo(() => {
+    if (modoGeral) return 0;
+
+    return concluidas.reduce((acc, c) => {
+      const ap = appointmentsMap[c.idConsulta];
+      if (!ap) return acc;
+      if (ap.tipoAtendimento !== "particular") return acc;
+
+      const number = Number(pickValor(ap));
+      return isNaN(number) ? acc : acc + number;
+    }, 0);
+  }, [concluidas, appointmentsMap, modoGeral]);
+
+
+  // ======================================
+  // CALCULAR A RECEITA TOTAL GERAL
+  // ======================================
+
+  const totalReceitaParticularGeral = useMemo(() => {
+    if (!modoGeral) return 0;
+
+    return concluidas.reduce((acc, c) => {
+      const ap = appointmentsMap[c.idConsulta];
+      if (!ap) return acc;
+      if (ap.tipoAtendimento !== "particular") return acc;
+
+      const number = Number(pickValor(ap));
+      return isNaN(number) ? acc : acc + number;
+    }, 0);
+  }, [concluidas, appointmentsMap, modoGeral]);
+
+
+
   // ======================================
   // EXPORTAR CSV (Excel abre)
   // ======================================
@@ -411,9 +465,9 @@ export default function RelatoriosScreen() {
         if (tipoAtendimento === "convenio") {
           convenioInfo = `${ap.convenio || "-"} / ${ap.categoria || "-"}`;
         } else if (tipoAtendimento === "particular") {
-          valor = tipoConsulta === "teleconsulta"
-            ? ap.valorteleConsulta || ap.valorConsulta || "-"
-            : ap.valorConsulta || "-";
+          const bruto = pickValor(ap);
+          valor = bruto > 0 ? String(bruto).replace(".", ",") : "-";
+
         }
 
 
@@ -453,9 +507,9 @@ export default function RelatoriosScreen() {
 
           convenioInfo = `${ap.convenio || "-"} / ${ap.categoria || "-"}`;
         } else if (tipoAtendimento === "particular") {
-          valor = tipoConsulta === "teleconsulta"
-            ? ap.valorteleConsulta || ap.valorConsulta || "-"
-            : ap.valorConsulta || "-";
+          const bruto = pickValor(ap);
+          valor = bruto > 0 ? String(bruto).replace(".", ",") : "-";
+
         }
 
         rows.push([
@@ -940,9 +994,9 @@ export default function RelatoriosScreen() {
                       if (tipoAtendimento === "convenio") {
                         convenioInfo = `${ap.convenio || "-"} / ${ap.categoria || "-"}`;
                       } else if (tipoAtendimento === "particular") {
-                        valor = tipoConsulta === "teleconsulta"
-                          ? ap.valorteleConsulta || ap.valorConsulta || "-"
-                          : ap.valorConsulta || "-";
+                        const bruto = pickValor(ap);
+                        valor = bruto > 0 ? String(bruto).replace(".", ",") : "-";
+
                       }
 
                       return (
@@ -1049,9 +1103,9 @@ export default function RelatoriosScreen() {
                       }
 
                       if (tipoAtendimento === "particular") {
-                        valor = tipoConsulta === "teleconsulta"
-                          ? ap.valorteleConsulta || ap.valorConsulta || "-"
-                          : ap.valorConsulta || "-";
+                        const bruto = pickValor(ap);
+                        valor = bruto > 0 ? String(bruto).replace(".", ",") : "-";
+
                       }
 
 
@@ -1082,6 +1136,20 @@ export default function RelatoriosScreen() {
               </div>
             )}
           </div>
+
+          {!modoGeral && totalReceitaParticular > 0 && (
+            <div className="mt-6 p-4 border border-green-300 rounded-xl bg-green-50 text-green-900 font-semibold text-lg print:border-black print:bg-white">
+              Total de receita (via particular): {formatMoney(totalReceitaParticular)}
+            </div>
+          )}
+
+          {modoGeral && totalReceitaParticularGeral > 0 && (
+            <div className="mt-6 p-4 border border-green-300 rounded-xl bg-green-50 text-green-900 font-semibold text-lg print:border-black print:bg-white">
+              Total de receita (via particular): {formatMoney(totalReceitaParticularGeral)}
+            </div>
+          )}
+
+
           {/* BOTÕES DE EXPORTAÇÃO */}
           <div className="flex gap-3 mt-4 print:hidden">
             <button

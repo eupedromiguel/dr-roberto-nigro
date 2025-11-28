@@ -7,15 +7,12 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function MedicosScreen() {
   const db = getFirestore();
   const storage = getStorage();
-
   const [medicos, setMedicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
   const [editando, setEditando] = useState(null);
-
   const [loadedImages, setLoadedImages] = useState({});
-
   const [formData, setFormData] = useState({
     nome: "",
     especialidade: "",
@@ -25,11 +22,21 @@ export default function MedicosScreen() {
     valorteleConsulta: "",
     novaFotoSelecionada: false,
   });
-
-  // marca imagem como carregada
   const handleImageLoad = (id) => {
     setLoadedImages((prev) => ({ ...prev, [id]: true }));
   };
+
+  // Formatar valor
+  function formatCurrencyInput(value) {
+
+    let cleaned = value.replace(/[^\d]/g, "");
+    while (cleaned.length < 3) cleaned = "0" + cleaned;
+    const cents = cleaned.slice(-2);
+    const integer = cleaned.slice(0, -2);
+    const formatted = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    return `${formatted}.${cents}`;
+  }
 
   // Carregar médicos do Firestore
   async function carregarMedicos() {
@@ -166,8 +173,8 @@ export default function MedicosScreen() {
                     alt={m.nome}
                     onLoad={() => handleImageLoad(m.id)}
                     className={`w-full h-full object-cover transition-all duration-700 ease-out ${isLoaded
-                        ? "opacity-100 blur-0 scale-100"
-                        : "opacity-0 blur-md scale-105"
+                      ? "opacity-100 blur-0 scale-100"
+                      : "opacity-0 blur-md scale-105"
                       }`}
                   />
                 </div>
@@ -182,15 +189,15 @@ export default function MedicosScreen() {
                       {m.especialidade}
                     </p>
                     {m.valorConsulta && (
-                      <p className="text-sm text-gray-800 mt-2">
-                        Consulta presencial particular:{" "}
+                      <p className="text-sm text-gray-800 mt-1">
+                        Consulta particular:{" "}
                         <span className="font-semibold">
                           R$ {parseFloat(m.valorConsulta).toFixed(2)}
                         </span>
                       </p>
                     )}
                     {m.valorteleConsulta && (
-                      <p className="text-sm text-gray-800 mt-2">
+                      <p className="text-sm text-gray-800 mt-1">
                         Teleconsulta particular:{" "}
                         <span className="font-semibold">
                           R$ {parseFloat(m.valorteleConsulta).toFixed(2)}
