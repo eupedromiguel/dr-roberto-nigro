@@ -21,6 +21,8 @@ import {
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { CalendarSearch, ClockPlus } from "lucide-react";
+
 
 // Toaster reutilizável
 
@@ -353,8 +355,8 @@ export default function AgendarScreen() {
                       alt={medico?.nome || "Médico(a)"}
                       onLoad={() => handleImageLoad(medicoId)}
                       className={`w-full h-full object-cover transition-all duration-700 ease-out ${isLoaded
-                          ? "opacity-100 blur-0 scale-100"
-                          : "opacity-0 blur-md scale-105"
+                        ? "opacity-100 blur-0 scale-100"
+                        : "opacity-0 blur-md scale-105"
                         } group-hover:scale-105`}
                     />
                   </div>
@@ -420,9 +422,11 @@ export default function AgendarScreen() {
                 onClick={() => setDiaSelecionado(data)}
                 className="w-full text-left bg-white border border-slate-200 rounded-lg shadow-sm px-5 py-4 hover:bg-yellow-50 transition-all"
               >
-                <span className="font-medium text-gray-800">
-                  📅 {formatarData(data)}
+                <span className="font-medium text-gray-800 flex items-center gap-1">
+                  <CalendarSearch size={20} className="text-yellow-500" />
+                  {formatarData(data)}
                 </span>
+
                 <p className="text-sm text-slate-500 mt-1">
                   {
                     slotsPorMedico[medicoSelecionado][data].length
@@ -454,7 +458,7 @@ export default function AgendarScreen() {
 
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="">
           <Button
             onClick={() => setDiaSelecionado(null)}
             className="bg-gray-200 text-gray-800 px-4 py-1 rounded-md hover:bg-gray-300"
@@ -478,15 +482,17 @@ export default function AgendarScreen() {
                 whileHover={{ scale: 1.05 }}
                 className="border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-yellow-50 transition"
               >
-                <p className="text-sm font-medium text-gray-800">
-                  🕒 {slot.hora}
+                <p className="text-sm font-medium text-gray-800 flex items-center gap-1">
+                  <ClockPlus size={20} className="text-yellow-500" />
+                  {slot.hora}
                 </p>
+
                 <Button
                   onClick={() => handleAgendar(slot)}
                   disabled={loadingSlotId === slot.id}
                   className={`text-sm bg-gray-950 text-white rounded-full px-4 py-1.5 w-full mt-2 transition-all ${loadingSlotId === slot.id
-                      ? "opacity-70 cursor-not-allowed"
-                      : "hover:bg-yellow-400"
+                    ? "opacity-70 cursor-not-allowed"
+                    : "hover:bg-yellow-400"
                     }`}
                 >
                   {loadingSlotId === slot.id ? (

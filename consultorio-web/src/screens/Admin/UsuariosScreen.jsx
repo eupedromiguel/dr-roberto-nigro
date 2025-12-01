@@ -48,8 +48,10 @@ export default function UsuariosScreen() {
         (u) =>
           u.nome?.toLowerCase().includes(termo) ||
           u.email?.toLowerCase().includes(termo) ||
-          u.role?.toLowerCase().includes(termo)
+          u.role?.toLowerCase().includes(termo) ||
+          u.uid?.toLowerCase().includes(termo)
       );
+
     }
     return filtrados;
   }, [usuarios, filtroRole, busca]);
@@ -86,12 +88,12 @@ export default function UsuariosScreen() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 shadow-sm">
-  <div>
-    <h2 className="text-xl font-light text-white">Usuários</h2>
-    <p className="text-sm text-gray-400">
-      {usuariosFiltrados.length} usuários na lista
-    </p>
-  </div>
+        <div>
+          <h2 className="text-xl font-light text-white">Usuários</h2>
+          <p className="text-sm text-gray-400">
+            {usuariosFiltrados.length} usuários na lista
+          </p>
+        </div>
 
 
         {/* Botão Recarregar */}
@@ -117,7 +119,7 @@ export default function UsuariosScreen() {
           <Search className="absolute left-3 top-2.5 text-slate-50" size={18} />
           <input
             type="text"
-            placeholder="Buscar por nome ou email"
+            placeholder="Buscar por nome, email ou ID"
             className="pl-9 pr-3 py-2 rounded-md w-full text-sm 
 bg-gray-800 text-white border border-gray-700
 placeholder-gray-400
@@ -212,17 +214,38 @@ hover:border-gray-500 transition"
                     className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-slate-50" : "bg-white"
                       } hover:bg-yellow-50 transition`}
                   >
-                    <td className="px-4 py-2 font-medium text-gray-900">
-  {u.nome || "(sem nome)"}
-</td>
+
+
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col">
+
+                        {/* NOME */}
+                        <span className="font-medium text-gray-900">
+                          {u.nome || "(sem nome)"}
+                        </span>
+
+                        {/* UID */}
+                        <span
+                          className="text-[10px] text-gray-400 font-mono cursor-pointer select-all"
+                          title="Clique para copiar o ID"
+                          onClick={() => navigator.clipboard.writeText(u.uid)}
+                        >
+                          {u.uid}
+                        </span>
+                      </div>
+                    </td>
+
 
                     <td className="px-4 py-2 text-gray-500 text-xs">
-  {u.email}
-</td>
+                      {u.email}
+                    </td>
 
                     <td className="px-4 py-2 text-gray-700">
-  {u.telefone || "—"}
-</td>
+                      {u.telefone || "—"}
+                    </td>
+
+
+
 
                     <td className="px-4 py-2 font-medium text-slate-700">
                       {atualizandoUid === u.uid ? (
@@ -234,15 +257,15 @@ hover:border-gray-500 transition"
 
                         <div className="relative inline-block">
                           <select
-  value={u.role || ""}
-  onChange={(e) => handleRoleChange(u.uid, e.target.value)}
-  className="appearance-none min-w-[140px]
+                            value={u.role || ""}
+                            onChange={(e) => handleRoleChange(u.uid, e.target.value)}
+                            className="appearance-none min-w-[140px]
 border border-gray-300 
 rounded-full px-4 py-1.5 pr-8
 text-sm font-medium
 bg-white text-gray-800 shadow-sm
 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition"
->
+                          >
 
                             <option value="">—</option>
                             <option value="patient">Paciente</option>
@@ -266,11 +289,15 @@ hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transitio
                             />
                           </svg>
                         </div>
-
-
-
                       )}
                     </td>
+
+
+
+
+
+
+
                   </tr>
                 ))
               ) : (

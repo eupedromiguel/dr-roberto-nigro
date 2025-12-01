@@ -3,7 +3,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "../../services/firebase";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Button from "../../components/Button";
-import { Stethoscope } from "lucide-react";
+import { Stethoscope, CalendarX2 } from "lucide-react";
 
 // Toaster reutilizável
 
@@ -264,7 +264,10 @@ export default function AgendamentosScreen() {
 
       {nenhuma && (
         <div className="text-center bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-          <div className="text-5xl mb-3">📅</div>
+          <div className="flex justify-center mb-3 text-gray-400">
+            <CalendarX2 size={56} />
+          </div>
+
           <p className="text-gray-700 text-lg font-medium">
             Você ainda não possui consultas agendadas.
           </p>
@@ -313,8 +316,8 @@ export default function AgendamentosScreen() {
                     <b>Tipo:</b>{" "}
                     <span
                       className={`${c.tipoConsulta === "teleconsulta"
-                          ? "text-purple-700"
-                          : "text-blue-700"
+                        ? "text-purple-700"
+                        : "text-blue-700"
                         }`}
                     >
                       {c.tipoConsulta === "teleconsulta"
@@ -329,8 +332,8 @@ export default function AgendamentosScreen() {
                       <b>Tipo de atendimento:</b>{" "}
                       <span
                         className={`${c.tipoAtendimento === "particular"
-                            ? "text-gray-700"
-                            : "text-gray-700"
+                          ? "text-gray-700"
+                          : "text-gray-700"
                           }`}
                       >
                         {c.tipoAtendimento === "particular"
@@ -396,7 +399,7 @@ export default function AgendamentosScreen() {
                   {/* Detalhes do Retorno */}
                   {c.status === "retorno" && c.retornoAgendado && (
                     <div className="mt-3 p-3 bg-yellow-50 border border-gray-200 rounded-lg text-sm text-blue-900">
-                      <p className="font-medium mb-1">📋 <b>Detalhes do Retorno</b></p>
+                      <p className="font-medium mb-1"> <b>Detalhes do Retorno</b></p>
 
                       <p>
                         <b>Data e horário:</b>{" "}
@@ -457,8 +460,8 @@ export default function AgendamentosScreen() {
                         onClick={() => solicitarCancelar(c.id)}
                         disabled={loadingCancelar === c.id}
                         className={`bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm ${loadingCancelar === c.id
-                            ? "opacity-70 cursor-not-allowed"
-                            : ""
+                          ? "opacity-70 cursor-not-allowed"
+                          : ""
                           }`}
                       >
                         {loadingCancelar === c.id ? (
@@ -494,14 +497,15 @@ export default function AgendamentosScreen() {
                   key={c.id}
                   className="border p-4 rounded-md bg-white shadow-sm hover:bg-gray-50 transition"
                 >
-                  <p className="font-semibold text-gray-900">
-                    🩺 {medico?.nome || "Carregando..."}
+                  <p className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Stethoscope className="text-gray-700" size={20} />
+                    {medico?.nome || "Carregando..."}
                   </p>
                   <p className="text-sm text-gray-600 mb-1">
                     {medico?.especialidade}
                   </p>
                   <p className="text-sm text-gray-700">
-                    📅 {formatarDataHora(c.horario)}
+                    {formatarDataHora(c.horario)}
                   </p>
                   <br />
 
@@ -517,8 +521,8 @@ export default function AgendamentosScreen() {
                     <b>Tipo:</b>{" "}
                     <span
                       className={`${c.tipoConsulta === "teleconsulta"
-                        ? "text-purple-700"
-                        : "text-blue-700"
+                        ? "text-gray-700"
+                        : "text-gray-700"
                         }`}
                     >
                       {c.tipoConsulta === "teleconsulta"
@@ -533,8 +537,8 @@ export default function AgendamentosScreen() {
                       <b>Tipo de atendimento:</b>{" "}
                       <span
                         className={`${c.tipoAtendimento === "particular"
-                          ? "text-green-700"
-                          : "text-indigo-700"
+                          ? "text-gray-700"
+                          : "text-gray-700"
                           }`}
                       >
                         {c.tipoAtendimento === "particular"
@@ -593,7 +597,7 @@ export default function AgendamentosScreen() {
                   {/* Detalhes do Retorno */}
                   {c.retornoAgendado && (
                     <div className="mt-3 p-3 bg-yellow-50 border border-gray-200 rounded-lg text-sm text-blue-900">
-                      <p className="font-medium mb-1">📋 <b>Detalhes do Retorno</b></p>
+                      <p className="font-medium mb-1"> <b>Detalhes do Retorno</b></p>
 
                       <p>
                         <b>Data e horário:</b>{" "}
@@ -654,14 +658,15 @@ export default function AgendamentosScreen() {
                   key={c.id}
                   className="border p-4 rounded-md bg-white shadow-sm opacity-85 hover:bg-gray-50 transition"
                 >
-                  <p className="font-semibold text-gray-900">
-                    🩺 {medico?.nome || "Carregando..."}
+                  <p className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Stethoscope className="text-gray-700" size={20} />
+                    {medico?.nome || "Carregando..."}
                   </p>
                   <p className="text-sm text-gray-600 mb-1">
                     {medico?.especialidade}
                   </p>
                   <p className="text-sm text-gray-700">
-                    📅 {formatarDataHora(c.horario)}
+                    {formatarDataHora(c.horario)}
                   </p>
                   <br />
                   {c.unidade && (
@@ -674,8 +679,8 @@ export default function AgendamentosScreen() {
                     <b>Tipo:</b>{" "}
                     <span
                       className={`${c.tipoConsulta === "teleconsulta"
-                        ? "text-purple-700"
-                        : "text-blue-700"
+                        ? "text-gray-700"
+                        : "text-gray-700"
                         }`}
                     >
                       {c.tipoConsulta === "teleconsulta"
@@ -689,8 +694,8 @@ export default function AgendamentosScreen() {
                       <b>Tipo de atendimento:</b>{" "}
                       <span
                         className={`${c.tipoAtendimento === "particular"
-                          ? "text-green-700"
-                          : "text-indigo-700"
+                          ? "text-gray-700"
+                          : "text-gray-700"
                           }`}
                       >
                         {c.tipoAtendimento === "particular"

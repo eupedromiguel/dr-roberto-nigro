@@ -4,6 +4,8 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "../../services/firebase";
 import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
 import Button from "../../components/Button";
+import { ArrowLeft } from "lucide-react";
+
 
 export default function ConfirmarAgendamentoScreen() {
   const { slotId } = useParams();
@@ -31,6 +33,10 @@ export default function ConfirmarAgendamentoScreen() {
   const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
   const [carteirinha, setCarteirinha] = useState("");
 
+
+  function handleVoltar() {
+    navigate("/paciente/agendar");
+  }
 
 
 
@@ -534,6 +540,16 @@ export default function ConfirmarAgendamentoScreen() {
           )}
         </div>
       )}
+
+
+      <Button
+  onClick={handleVoltar}
+  className="w-full bg-gray-300 text-gray-800 hover:bg-gray-100 flex items-center justify-center gap-1"
+>
+  <ArrowLeft size={16} />
+  Voltar
+</Button>
+
 
 
       {/* Botão principal */}

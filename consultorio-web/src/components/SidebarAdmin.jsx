@@ -26,14 +26,14 @@ export default function SidebarAdmin() {
 
   const menus = [
     { label: "Início", path: "/", icon: Home },
-    { label: "Meu perfil", path: "/perfil", icon: Settings },
+    { label: "Notificações", path: "/admin/notificacoes", icon: Bell },
     { label: "Gerenciar usuários", path: "/admin/usuarios", icon: Users },
     { label: "Gerenciar médicos", path: "/admin/medicos", icon: Stethoscope },
-    { label: "Notificações", path: "/admin/notificacoes", icon: Bell },
     { label: "Gerenciar convênios", path: "/admin/planos", icon: IdCardLanyard },
     { label: "Gerenciar agendas", path: "/admin/agendas", icon: CalendarCog },
     { label: "Gerenciar slots", path: "/admin/slots", icon: BetweenHorizontalEnd },
     { label: "Relatórios", path: "/admin/relatorios", icon: ChartNoAxesCombined },
+    { label: "Meu perfil", path: "/perfil", icon: Settings },
   ];
 
   const linkClasses = (path) =>

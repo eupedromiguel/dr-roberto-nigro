@@ -134,7 +134,14 @@ exports.criarConsulta = onCall(async (request) => {
 
     // Busca o valor da consulta no perfil do médico
     const medicoSnap = await db.collection("usuarios").doc(medicoId).get();
-    const medicoData = medicoSnap.exists ? medicoSnap.data() : {};
+
+    if (!medicoSnap.exists) {
+      throw new HttpsError("not-found", "Médico não encontrado.");
+    }
+
+    const medicoData = medicoSnap.data();
+
+
 
     const valorConsulta = medicoData?.valorConsulta || null;
     const valorteleConsulta = medicoData?.valorteleConsulta || null;
@@ -212,6 +219,10 @@ exports.cancelarConsulta = onCall(async (request) => {
     }
 
     const consulta = snap.data();
+    if (consulta.status === "cancelada") {
+      throw new HttpsError("failed-precondition", "Consulta já foi cancelada.");
+    }
+
     const uid = request.auth.uid;
     const role = request.auth.token.role;
 
@@ -289,6 +300,14 @@ exports.marcarComoConcluida = onCall(async (request) => {
     }
 
     const consulta = snap.data();
+    if (consulta.status === "concluida") {
+      throw new HttpsError("failed-precondition", "Consulta já foi concluída.");
+    }
+    if (consulta.status === "cancelada") {
+      throw new HttpsError("failed-precondition", "Consultas canceladas não podem ser concluídas.");
+    }
+
+
     const uid = request.auth.uid;
     const role = request.auth.token.role;
 
