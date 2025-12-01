@@ -13,6 +13,106 @@ export default function UsuariosScreen() {
   const [busca, setBusca] = useState("");
   const [atualizandoUid, setAtualizandoUid] = useState(null);
   const [recarregando, setRecarregando] = useState(false);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const USUARIOS_POR_PAGINA = 50;
+  const [modalConfirmOpen, setModalConfirmOpen] = useState(false);
+  const [rolePendente, setRolePendente] = useState(null);
+  const [usuarioPendente, setUsuarioPendente] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+
+  useEffect(() => {
+  if (!mensagem) return;
+
+  const timer = setTimeout(() => {
+    setMensagem("");
+  }, 3000);
+
+  return () => clearTimeout(timer);
+}, [mensagem]);
+
+
+  // Confirmar alteração de Role
+
+  async function confirmarAlteracaoRole() {
+    if (!usuarioPendente || !rolePendente) return;
+
+    try {
+      setConfirmLoading(true);
+
+      await handleRoleChange(usuarioPendente.uid, rolePendente);
+
+      setModalConfirmOpen(false);
+      setUsuarioPendente(null);
+      setRolePendente(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setConfirmLoading(false);
+    }
+  }
+
+
+
+  // Paginação
+  function Pagination({ current, total, onChange }) {
+    if (total <= 1) return null;
+
+    const getPages = () => {
+      const pages = [];
+      const maxAround = 1;
+      const push = (v) => pages.push(v);
+
+      const start = Math.max(2, current - maxAround);
+      const end = Math.min(total - 1, current + maxAround);
+
+      push(1);
+      if (start > 2) push("...");
+      for (let p = start; p <= end; p++) push(p);
+      if (end < total - 1) push("...");
+      if (total > 1) push(total);
+
+      if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1);
+      }
+      return pages;
+    };
+
+    const pages = getPages();
+
+    const baseBtn =
+      "px-3 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400";
+    const activeBtn = "bg-yellow-400 text-white";
+    const idleBtn = "bg-gray-200 text-gray-800 hover:bg-gray-300";
+
+    const go = (n) => {
+      if (n < 1 || n > total || n === current) return;
+      onChange(n);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    return (
+      <nav className="flex items-center justify-center gap-2 flex-wrap mt-4">
+        <button onClick={() => go(1)} disabled={current === 1} className={`${baseBtn} ${current === 1 ? "opacity-40 cursor-not-allowed" : idleBtn}`}>«</button>
+        <button onClick={() => go(current - 1)} disabled={current === 1} className={`${baseBtn} ${current === 1 ? "opacity-40 cursor-not-allowed" : idleBtn}`}>‹</button>
+
+        {pages.map((p, idx) =>
+          p === "..." ? (
+            <span key={idx} className="px-2 text-gray-500">…</span>
+          ) : (
+            <button key={p} onClick={() => go(p)} className={`${baseBtn} ${p === current ? activeBtn : idleBtn}`}>
+              {p}
+            </button>
+          )
+        )}
+
+        <button onClick={() => go(current + 1)} disabled={current === total} className={`${baseBtn} ${current === total ? "opacity-40 cursor-not-allowed" : idleBtn}`}>›</button>
+        <button onClick={() => go(total)} disabled={current === total} className={`${baseBtn} ${current === total ? "opacity-40 cursor-not-allowed" : idleBtn}`}>»</button>
+      </nav>
+    );
+  }
+
+
 
   // Carrega lista de usuários (usado no mount e no botão de recarregar)
   async function carregarUsuarios() {
@@ -23,6 +123,7 @@ export default function UsuariosScreen() {
       const listarUsuarios = httpsCallable(functions, "admin-listarUsuarios");
       const res = await listarUsuarios();
       setUsuarios(res.data?.usuarios || []);
+      setPaginaAtual(1);
     } catch (e) {
       console.error(e);
       setErro(e.message || "Erro ao carregar usuários");
@@ -35,6 +136,13 @@ export default function UsuariosScreen() {
   useEffect(() => {
     carregarUsuarios();
   }, []);
+
+  // RESETAR A PÁGINA QUANDO TROCAR BUSCA OU FILTRO
+
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [busca, filtroRole]);
+
 
   // Filtragem dinâmica (busca + filtro por papel)
   const usuariosFiltrados = useMemo(() => {
@@ -55,6 +163,18 @@ export default function UsuariosScreen() {
     }
     return filtrados;
   }, [usuarios, filtroRole, busca]);
+
+
+  // Usuários por página
+
+  const totalPaginas = Math.ceil(usuariosFiltrados.length / USUARIOS_POR_PAGINA);
+
+  const usuariosPaginados = useMemo(() => {
+    const inicio = (paginaAtual - 1) * USUARIOS_POR_PAGINA;
+    const fim = inicio + USUARIOS_POR_PAGINA;
+    return usuariosFiltrados.slice(inicio, fim);
+  }, [usuariosFiltrados, paginaAtual]);
+
 
   // Atualizar papel inline
   async function handleRoleChange(uid, novoRole) {
@@ -85,14 +205,102 @@ export default function UsuariosScreen() {
     setTimeout(() => setRecarregando(false), 500);
   }
 
+
+
+
+  function ConfirmRoleModal({ open, onClose, onConfirm, user, newRole, confirmLoading }) {
+    if (!open || !user) return null;
+
+    const map = {
+      patient: "Paciente",
+      doctor: "Médico",
+      admin: "Administrador",
+      "": "Sem papel",
+    };
+
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white rounded-xl shadow-xl p-6 w-[92%] max-w-md">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Confirmar alteração de função
+          </h3>
+
+          <p className="text-sm text-gray-700 mb-4">
+            Tem certeza que deseja alterar o papel de:
+          </p>
+
+          <div className="border rounded-lg p-3 mb-4 text-sm bg-gray-50">
+            <div><b>Nome:</b> {user.nome || "(sem nome)"}</div>
+            <div><b>Email:</b> {user.email}</div>
+            <div><b>Atual:</b> {map[user.role] || "Indefinido"}</div>
+            <div className="mt-2 text-red-600">
+              ➜ Novo papel: <b>{map[newRole]}</b>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              disabled={confirmLoading}
+              className="px-4 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+
+            <button
+              onClick={onConfirm}
+              disabled={confirmLoading}
+              className={`px-4 py-2 text-sm rounded-md flex items-center gap-2 justify-center text-white transition
+    ${confirmLoading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}
+  `}
+            >
+              {confirmLoading && (
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 000 16v-4l3 3-3 3v-4a8 8 0 01-8-8z"
+                  ></path>
+                </svg>
+              )}
+
+              {confirmLoading ? "Salvando..." : "Confirmar mudança"}
+            </button>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+
+
+
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 shadow-sm">
         <div>
           <h2 className="text-xl font-light text-white">Usuários</h2>
           <p className="text-sm text-gray-400">
-            {usuariosFiltrados.length} usuários na lista
+            Total de contas cadastradas: {usuarios.length}
           </p>
+
         </div>
 
 
@@ -208,7 +416,7 @@ hover:border-gray-500 transition"
             </thead>
             <tbody>
               {usuariosFiltrados.length > 0 ? (
-                usuariosFiltrados.map((u, i) => (
+                usuariosPaginados.map((u, i) => (
                   <tr
                     key={u.uid}
                     className={`border-b border-slate-100 ${i % 2 === 0 ? "bg-slate-50" : "bg-white"
@@ -258,7 +466,12 @@ hover:border-gray-500 transition"
                         <div className="relative inline-block">
                           <select
                             value={u.role || ""}
-                            onChange={(e) => handleRoleChange(u.uid, e.target.value)}
+                            onChange={(e) => {
+                              setUsuarioPendente(u);
+                              setRolePendente(e.target.value);
+                              setModalConfirmOpen(true);
+                            }}
+
                             className="appearance-none min-w-[140px]
 border border-gray-300 
 rounded-full px-4 py-1.5 pr-8
@@ -312,8 +525,37 @@ hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-400 transitio
               )}
             </tbody>
           </table>
+
+          {totalPaginas > 1 && (
+            <Pagination
+              current={paginaAtual}
+              total={totalPaginas}
+              onChange={setPaginaAtual}
+            />
+          )}
+
+
+
         </motion.div>
       )}
+
+
+      <ConfirmRoleModal
+  open={modalConfirmOpen}
+  user={usuarioPendente}
+  newRole={rolePendente}
+  onConfirm={confirmarAlteracaoRole}
+  confirmLoading={confirmLoading}
+  onClose={() => {
+    setModalConfirmOpen(false);
+    setUsuarioPendente(null);
+    setRolePendente(null);
+  }}
+/>
+
+
+
+
     </div>
   );
 }
