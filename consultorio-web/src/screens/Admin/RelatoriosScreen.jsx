@@ -937,7 +937,7 @@ export default function RelatoriosScreen() {
                       className="flex items-center gap-2 text-xs"
                     >
                       <div className="w-10 text-right text-slate-600">
-                        {String(dia).padStart(2, "0")}
+                      Dia {String(dia).padStart(2, "0")}
                       </div>
                       <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
