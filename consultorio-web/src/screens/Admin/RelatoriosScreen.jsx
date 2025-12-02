@@ -112,8 +112,10 @@ export default function RelatoriosScreen() {
   }
 
 
-
-
+  function getRetornoText(idConsulta) {
+    const ap = appointmentsMap[idConsulta];
+    return ap?.hasRetorno ? "Sim" : "Não";
+  }
 
 
   function pickValor(ap) {
@@ -379,7 +381,7 @@ export default function RelatoriosScreen() {
   const taxaConclusao =
     total > 0 ? ((totalConcluidas / total) * 100).toFixed(1) : "0.0";
 
-  // Distribuição por dia (usando appointmentOriginalCreatedAt ou dataConsulta)
+
   const atendimentosPorDia = useMemo(() => {
     const map = {};
 
@@ -468,7 +470,8 @@ export default function RelatoriosScreen() {
         "Convênio / Categoria",
         "Valor",
         "Data da Consulta",
-        "Agendada em"
+        "Agendada em",
+        "Retorno"
       ]);
 
 
@@ -508,6 +511,7 @@ export default function RelatoriosScreen() {
           valor,
           formatDateTime(getDataConsultaReal(c)),
           formatDateTime(c.appointmentOriginalCreatedAt),
+          getRetornoText(c.idConsulta)
         ]);
 
       });
@@ -760,8 +764,14 @@ export default function RelatoriosScreen() {
         </button>
 
         {erro && (
-          <p className="text-sm text-red-600 ml-auto">{erro}</p>
-        )}
+  <div className="w-full mt-2 flex justify-center">
+    <span className="text-red-700 text-sm px-3 py-1 rounded-md font-semibold">
+      {erro}
+    </span>
+  </div>
+)}
+
+
       </div>
 
       {/* INFO DO MÉDICO / MÊS */}
@@ -937,7 +947,7 @@ export default function RelatoriosScreen() {
                       className="flex items-center gap-2 text-xs"
                     >
                       <div className="w-10 text-right text-slate-600">
-                      Dia {String(dia).padStart(2, "0")}
+                        Dia {String(dia).padStart(2, "0")}
                       </div>
                       <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
@@ -1003,6 +1013,10 @@ export default function RelatoriosScreen() {
                       <th className="px-3 py-2 text-left border-b text-xs font-semibold">Consulta</th>
                       <th className="px-3 py-2 text-left border-b text-xs font-semibold">Convênio / Categoria</th>
                       <th className="px-3 py-2 text-left border-b text-xs font-semibold">Valor</th>
+                      <th className="px-3 py-2 text-left border-b text-xs font-semibold">
+                        Retorno
+                      </th>
+
 
                     </tr>
                   </thead>
@@ -1053,8 +1067,13 @@ export default function RelatoriosScreen() {
                           </td>
                           <td className="px-3 py-2 border-b">{tipoAtendimento}</td>
                           <td className="px-3 py-2 border-b">{tipoConsulta}</td>
+
                           <td className="px-3 py-2 border-b">{convenioInfo}</td>
                           <td className="px-3 py-2 border-b">{valor}</td>
+                          <td className="px-3 py-2 border-b">
+                            {getRetornoText(c.idConsulta)}
+                          </td>
+
 
                         </tr>
                       );

@@ -555,11 +555,17 @@ export default function AgendaScreen() {
     }
 
     // Confere se a data realmente existe (ex: 31/02 não existe)
-    const dataObj = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
-    if (isNaN(dataObj.getTime())) {
+    const dataObj = new Date(yyyy, mm - 1, dd);
+
+    if (
+      dataObj.getFullYear() !== yyyy ||
+      dataObj.getMonth() !== mm - 1 ||
+      dataObj.getDate() !== dd
+    ) {
       notify("Data inexistente.", "error");
       return false;
     }
+
 
     // Confere dia/mês real (Date pode ajustar sozinho)
     if (
@@ -884,7 +890,7 @@ export default function AgendaScreen() {
                 className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
                 onClick={() => setShowGerador(true)}
               >
-                Gerar vários horários
+                Gerar vários dias e slots
               </Button>
 
 
@@ -895,7 +901,7 @@ export default function AgendaScreen() {
                   className="w-full sm:w-auto !bg-gray-800 hover:!bg-yellow-400 text-white font-medium px-6 py-2 rounded-md transition"
                   onClick={() => setShowInputDia(true)}
                 >
-                  Adicionar dia
+                  Gerar apenas um dia
                 </Button>
               ) : (
                 // INPUT VISÍVEL APÓS CLICAR
@@ -1431,14 +1437,21 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
     // ==================================================
     // Bloqueio de datas passadas (comparação ISO real)
     // ==================================================
-    const hojeISO = todayStr(); // já está YYYY-MM-DD
+
+    const hojeISO = todayStr();
 
     const inicioISO = `${iY}-${String(iM).padStart(2, "0")}-${String(iD).padStart(2, "0")}`;
 
-    if (inicioISO < hojeISO) {
-      setPreviewError("Não é permitido gerar horários em dias que já passaram.");
+    // Só bloqueia se a data inicial for ANTES de hoje
+    // Só bloqueia se DATA FINAL também estiver no passado
+    const fimISO = `${fY}-${String(fM).padStart(2, "0")}-${String(fD).padStart(2, "0")}`;
+
+    if (fimISO < hojeISO) {
+      setPreviewError("Não é permitido gerar horários apenas em datas passadas.");
       return;
     }
+
+
 
     if (dtFim < dtInicio) {
       setPreviewError("A data final deve ser igual ou maior que a inicial.");
@@ -1472,12 +1485,23 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
         let atualMin = h * 60 + m;
         const fimMin = endH * 60 + endM;
 
+        // Se for HOJE, começa após a hora atual
+        if (cursor.toDateString() === hoje.toDateString()) {
+          const agoraMin = hoje.getHours() * 60 + hoje.getMinutes();
+          atualMin = Math.max(atualMin, agoraMin + 1);
+        }
+
+        // Se não sobrar tempo no dia, pula
+        if (atualMin > fimMin) {
+          cursor.setDate(cursor.getDate() + 1);
+          continue;
+        }
+
         while (atualMin <= fimMin) {
           const hh = String(Math.floor(atualMin / 60)).padStart(2, "0");
           const mm = String(atualMin % 60).padStart(2, "0");
           const horaStr = `${hh}:${mm}`;
 
-          // GERA ISO SEM UTC
           const dataISO =
             cursor.getFullYear() +
             "-" +
@@ -1485,16 +1509,13 @@ function GerarSlotsModal({ open, onClose, onGenerate }) {
             "-" +
             String(cursor.getDate()).padStart(2, "0");
 
-          resultado.push({
-            data: dataISO,
-            hora: horaStr
-          });
+          resultado.push({ data: dataISO, hora: horaStr });
 
           atualMin += intervalo;
         }
       }
 
-      // SOMA +1 DIA (sem afetar horário)
+      // Avança para próximo dia
       cursor.setDate(cursor.getDate() + 1);
     }
 

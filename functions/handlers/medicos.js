@@ -25,10 +25,9 @@ exports.criarSlot = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Campos obrigatórios: data e hora.");
   }
 
-  // Médico pode criar seus próprios slots; admin pode criar para outros médicos
   const targetMedicoId = role === "doctor" ? uid : medicoId;
 
-  if (role !== "doctor" && role !== "admin") {
+  if (!["doctor", "admin"].includes(role)) {
     throw new HttpsError("permission-denied", "Apenas médicos ou administradores podem criar slots.");
   }
 
@@ -37,23 +36,50 @@ exports.criarSlot = onCall(async (request) => {
   }
 
   try {
-    // Formata data (YYYY-MM-DD → DD-MM-YYYY)
+    // YYYY-MM-DD → DD-MM-YYYY
     const partes = data.split("-");
     if (partes.length !== 3)
-      throw new HttpsError("invalid-argument", "Formato de data inválido (esperado YYYY-MM-DD).");
+      throw new HttpsError("invalid-argument", "Formato de data inválido (use YYYY-MM-DD).");
+
     const dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
 
-    // Bloqueia slots no passado
-    const agora = new Date();
-    const todayISO = agora.toISOString().split("T")[0];
-    const nowHM = `${String(agora.getHours()).padStart(2, "0")}:${String(agora.getMinutes()).padStart(2, "0")}`;
-    const [ddF, mmF, yyyyF] = dataFormatada.split("-");
-    const iso = `${yyyyF}-${mmF}-${ddF}`;
-    if (iso < todayISO || (iso === todayISO && hora <= nowHM)) {
+    // CORREÇÃO DEFINITIVA DE DATA E HORA
+    const [dd, mm, yyyy] = dataFormatada.split("-");
+    const [HH, MM] = hora.split(":").map(Number);
+
+    if (isNaN(HH) || isNaN(MM))
+      throw new HttpsError("invalid-argument", "Formato de hora inválido (use HH:mm).");
+
+    const dataHoraSlot = new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(HH),
+      Number(MM),
+      0,
+      0
+    );
+
+    const agoraServidor = new Date();
+
+    // Corrige para horário do Brasil (UTC-3)
+    const agoraBrasil = new Date(
+      agoraServidor.getUTCFullYear(),
+      agoraServidor.getUTCMonth(),
+      agoraServidor.getUTCDate(),
+      agoraServidor.getUTCHours() - 3,
+      agoraServidor.getUTCMinutes(),
+      0,
+      0
+    );
+
+    // Compara corretamente
+    if (dataHoraSlot <= agoraBrasil) {
       throw new HttpsError("failed-precondition", "Não é permitido criar slot no passado.");
     }
 
-    // Verifica conflito
+
+    // Conflito
     const conflitoSnap = await db
       .collection("availability_slots")
       .where("medicoId", "==", targetMedicoId)
@@ -69,7 +95,6 @@ exports.criarSlot = onCall(async (request) => {
           status: "livre",
           atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
         });
-        console.log(`♻️ Slot reativado: ${dataFormatada} ${hora} — médico ${targetMedicoId}`);
         return { sucesso: true, mensagem: "Slot reaberto com sucesso." };
       }
       throw new HttpsError("already-exists", "Já existe um slot para este dia e hora.");
@@ -84,20 +109,15 @@ exports.criarSlot = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`Slot criado: ${dataFormatada} às ${hora} — médico ${targetMedicoId}`);
     return { sucesso: true, mensagem: "Slot criado com sucesso." };
+
   } catch (error) {
     console.error("Erro ao criar slot:", error);
-
-
-    if (error instanceof HttpsError) {
-      throw error;
-    }
-
-
+    if (error instanceof HttpsError) throw error;
     throw new HttpsError("internal", error.message || "Erro ao criar o slot.");
   }
 });
+
 
 
 /**
@@ -158,10 +178,10 @@ exports.atualizarSlot = onCall(async (request) => {
 
     await slotRef.update(updates);
 
-    console.log(`✏️ Slot atualizado (${slotId}) por ${role} ${uid}:`, updates);
+    console.log(`Slot atualizado (${slotId}) por ${role} ${uid}:`, updates);
     return { sucesso: true, mensagem: "Slot atualizado com sucesso." };
   } catch (error) {
-    console.error("❌ Erro ao atualizar slot:", error);
+    console.error("Erro ao atualizar slot:", error);
     throw new HttpsError("internal", "Erro ao atualizar o slot.", error.message);
   }
 });
@@ -272,10 +292,10 @@ exports.deletarSlot = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`🟡 Slot ${slotId} cancelado (por ${role} ${uid})`);
+    console.log(`Slot ${slotId} cancelado (por ${role} ${uid})`);
     return { sucesso: true, mensagem: "Slot cancelado com sucesso." };
   } catch (error) {
-    console.error("❌ Erro ao cancelar slot:", error);
+    console.error("Erro ao cancelar slot:", error);
     throw new HttpsError("internal", "Erro ao cancelar o slot.", error.message);
   }
 });
@@ -319,10 +339,10 @@ exports.reativarSlot = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`♻️ Slot ${slotId} reaberto (por ${role} ${uid})`);
+    console.log(`Slot ${slotId} reaberto (por ${role} ${uid})`);
     return { sucesso: true, mensagem: "Slot reaberto com sucesso." };
   } catch (error) {
-    console.error("❌ Erro ao reabrir slot:", error);
+    console.error("Erro ao reabrir slot:", error);
     throw new HttpsError("internal", "Erro ao reabrir o slot.", error.message);
   }
 });
@@ -362,10 +382,10 @@ exports.listarMeusSlots = onCall(async (request) => {
       ...doc.data(),
     }));
 
-    console.log(`📅 ${slots.length} slots retornados para médico ${targetId}`);
+    console.log(`${slots.length} slots retornados para médico ${targetId}`);
     return { sucesso: true, slots };
   } catch (error) {
-    console.error("❌ Erro ao listar slots:", error);
+    console.error("Erro ao listar slots:", error);
     throw new HttpsError("internal", "Erro ao listar slots.", error.message);
   }
 });
@@ -486,51 +506,64 @@ exports.criarVariosSlots = onCall(async (request) => {
   let ignorados = 0;
   let falharam = 0;
 
-  const agora = new Date();
-  const hojeISO = agora.toISOString().split("T")[0];
-  const horaAtual = `${String(agora.getHours()).padStart(2, "0")}:${String(
-    agora.getMinutes()
-  ).padStart(2, "0")}`;
 
   // ======================================================
   // 3) Processar lista de slots
   // ======================================================
+  const agoraServidor = new Date();
+
+      const agoraBrasil = new Date(
+        agoraServidor.getUTCFullYear(),
+        agoraServidor.getUTCMonth(),
+        agoraServidor.getUTCDate(),
+        agoraServidor.getUTCHours() - 3,
+        agoraServidor.getUTCMinutes(),
+        0,
+        0
+      );
+
   for (const s of slots) {
     try {
-      // Entrada: YYYY-MM-DD
       const partes = s.data.split("-");
       if (partes.length !== 3) {
         falharam++;
         continue;
       }
 
-      const ano = partes[0]; // YYYY
-      const mes = partes[1]; // MM
-      const dia = partes[2]; // DD
+      const ano = partes[0];
+      const mes = partes[1];
+      const dia = partes[2];
 
-      // Para validação de passado → usar ISO
-      const dataISO = `${ano}-${mes}-${dia}`;
+      const hora = String(s.hora || "").padStart(5, "0");
+      if (!/^\d{2}:\d{2}$/.test(hora)) {
+        falharam++;
+        continue;
+      }
 
-      const hora = s.hora;
 
-      // Ignorar horários passados
-      if (dataISO < hojeISO || (dataISO === hojeISO && hora <= horaAtual)) {
+      const dataHoraSlot = new Date(
+        Number(ano),
+        Number(mes) - 1,
+        Number(dia),
+        Number(hora.split(":")[0]),
+        Number(hora.split(":")[1]),
+        0,
+        0
+      );
+
+
+      if (dataHoraSlot <= agoraBrasil) {
         ignorados++;
         continue;
       }
 
-      // Formato PADRÃO do Firestore (igual outras funções): DD-MM-YYYY
-      const dataDDMMYYYY = `${dia}-${mes}-${ano}`;
 
+      const dataDDMMYYYY = `${dia}-${mes}-${ano}`;
       const chave = `${dataDDMMYYYY}|${hora}`;
       const existente = mapa.get(chave);
 
-      // -----------------------------------------
-      // Se já existe
-      // -----------------------------------------
       if (existente) {
         if (existente.status === "cancelado") {
-          // Cancelado → reativar
           batch.update(
             db.collection("availability_slots").doc(existente.id),
             {
@@ -540,15 +573,11 @@ exports.criarVariosSlots = onCall(async (request) => {
           );
           criados++;
         } else {
-          // livre / ocupado → ignorar
           ignorados++;
         }
         continue;
       }
 
-      // -----------------------------------------
-      // Criar slot novo
-      // -----------------------------------------
       const docRef = db.collection("availability_slots").doc();
       batch.set(docRef, {
         medicoId: targetId,
@@ -578,4 +607,5 @@ exports.criarVariosSlots = onCall(async (request) => {
     falharam,
   };
 });
+
 
