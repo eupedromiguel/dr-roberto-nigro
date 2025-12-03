@@ -16,13 +16,13 @@ exports.criarConsulta = onCall(async (request) => {
   }
 
   const role = request.auth.token.role;
+
   if (role !== "patient") {
     throw new HttpsError(
       "permission-denied",
       "Apenas pacientes podem agendar consultas."
     );
   }
-
 
   if (!request.auth.token.email_verified) {
     throw new HttpsError(
@@ -31,8 +31,8 @@ exports.criarConsulta = onCall(async (request) => {
     );
   }
 
-
   const pacienteId = request.auth.uid;
+
   const {
     medicoId,
     slotId,
@@ -46,10 +46,9 @@ exports.criarConsulta = onCall(async (request) => {
     unidade,
   } = request.data || {};
 
-
-
-
-  // Validação de médico, slot e horário
+  // -----------------------------
+  // Validações básicas
+  // -----------------------------
   if (!medicoId || !slotId || !horario) {
     throw new HttpsError(
       "invalid-argument",
@@ -57,7 +56,6 @@ exports.criarConsulta = onCall(async (request) => {
     );
   }
 
-  // Validação da unidade médica
   if (tipoConsulta !== "teleconsulta" && (!unidade || unidade.trim() === "")) {
     throw new HttpsError(
       "invalid-argument",
@@ -65,13 +63,10 @@ exports.criarConsulta = onCall(async (request) => {
     );
   }
 
-  // Se for teleconsulta, define unidade padrão
   const unidadeFinal =
     tipoConsulta === "teleconsulta"
       ? "Atendimento remoto - Teleconsulta"
       : unidade;
-
-
 
   if (tipoAtendimento === "convenio") {
     if (!categoria || categoria.trim() === "") {
@@ -87,26 +82,32 @@ exports.criarConsulta = onCall(async (request) => {
     }
   }
 
-
-
-
-
-
   try {
-    // Verifica se o horário já está ocupado
-    const conflitoSnap = await db
+    // --------------------------------------------------
+    // 1) Impede que o MESMO PACIENTE tenha dois agendamentos no mesmo horário
+    // --------------------------------------------------
+
+    const conflitoHorarioMesmoPaciente = await db
       .collection("appointments")
-      .where("medicoId", "==", medicoId)
+      .where("pacienteId", "==", pacienteId)
       .where("horario", "==", horario)
-      .where("status", "in", ["agendado", "concluida"])
+      .where("status", "in", ["agendado", "confirmado", "retorno"])
       .limit(1)
       .get();
 
-    if (!conflitoSnap.empty) {
-      throw new HttpsError("already-exists", "Esse horário já está ocupado.");
+    if (!conflitoHorarioMesmoPaciente.empty) {
+      throw new HttpsError(
+        "already-exists",
+        "Você já possui uma consulta marcada neste horário."
+      );
     }
 
-    // Impede novo agendamento com o mesmo médico se houver retorno pendente ou consulta ativa
+
+    // --------------------------------------------------
+    // 2) BLOQUEIO MESMO MÉDICO (CONSULTA ATIVA OU RETORNO)
+    //    "Mesmo paciente + mesmo médico não pode ter
+    //     duas consultas ativas/retorno, mesmo em horários diferentes"
+    // --------------------------------------------------
     const conflitoMesmoMedico = await db
       .collection("appointments")
       .where("pacienteId", "==", pacienteId)
@@ -116,8 +117,8 @@ exports.criarConsulta = onCall(async (request) => {
       .get();
 
     if (!conflitoMesmoMedico.empty) {
-      // Verifica se o conflito é um retorno
       const consultaConflito = conflitoMesmoMedico.docs[0].data();
+
       if (consultaConflito.status === "retorno") {
         throw new HttpsError(
           "failed-precondition",
@@ -131,8 +132,9 @@ exports.criarConsulta = onCall(async (request) => {
       }
     }
 
-
-    // Busca o valor da consulta no perfil do médico
+    // --------------------------------------------------
+    // 3) Busca valores da consulta no perfil do médico
+    // --------------------------------------------------
     const medicoSnap = await db.collection("usuarios").doc(medicoId).get();
 
     if (!medicoSnap.exists) {
@@ -141,12 +143,12 @@ exports.criarConsulta = onCall(async (request) => {
 
     const medicoData = medicoSnap.data();
 
-
-
     const valorConsulta = medicoData?.valorConsulta || null;
     const valorteleConsulta = medicoData?.valorteleConsulta || null;
 
-    // Cria a consulta com os valores do médico
+    // --------------------------------------------------
+    // 4) Cria a consulta
+    // --------------------------------------------------
     const ref = await db.collection("appointments").add({
       pacienteId,
       medicoId,
@@ -155,7 +157,6 @@ exports.criarConsulta = onCall(async (request) => {
       tipoConsulta: tipoConsulta || "presencial",
       sintomas: sintomas || null,
       tipoAtendimento: tipoAtendimento || "particular",
-
 
       convenio: tipoAtendimento === "convenio" ? convenio || null : null,
       categoria: tipoAtendimento === "convenio" ? categoria || null : null,
@@ -171,17 +172,15 @@ exports.criarConsulta = onCall(async (request) => {
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-
-
-    // Atualiza o slot para "ocupado"
+    // --------------------------------------------------
+    // 5) Atualiza o slot para "ocupado"
+    // --------------------------------------------------
     await db.collection("availability_slots").doc(slotId).update({
       status: "ocupado",
       appointmentId: ref.id,
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-
-    // Retorna o ID do documento criado
     return {
       sucesso: true,
       id: ref.id,
@@ -189,9 +188,23 @@ exports.criarConsulta = onCall(async (request) => {
     };
   } catch (error) {
     console.error("Erro ao criar consulta:", error);
-    throw new HttpsError("internal", "Erro ao criar a consulta.", error.message);
+
+    // Se eu mesmo lancei um HttpsError lá em cima, só repasso
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    // Qualquer outro erro inesperado vira "internal"
+    throw new HttpsError(
+      "internal",
+      "Erro ao criar a consulta.",
+      error.message || undefined
+    );
   }
+
 });
+
+
 
 /**
 
@@ -261,9 +274,11 @@ exports.cancelarConsulta = onCall(async (request) => {
     if (consulta.slotId) {
       await db.collection("availability_slots").doc(consulta.slotId).update({
         status: "livre",
+        appointmentId: null,
         atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
       });
     }
+
 
     console.log(`Consulta ${consultaId} marcada como cancelada.`);
     return { sucesso: true, mensagem: "Consulta cancelada com sucesso." };
