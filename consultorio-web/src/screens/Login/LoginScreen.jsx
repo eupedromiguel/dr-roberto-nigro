@@ -35,6 +35,8 @@ export default function LoginScreen() {
   const [modalResetOpen, setModalResetOpen] = useState(false);
   const [emailReset, setEmailReset] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+  const [erroReset, setErroReset] = useState("");
+
 
   const navigate = useNavigate();
 
@@ -64,6 +66,18 @@ export default function LoginScreen() {
     }
   }
 
+  // Controle de auto-limpeza
+  useEffect(() => {
+    if (!erroReset) return;
+
+    const timer = setTimeout(() => {
+      setErroReset("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [erroReset]);
+
+
   // Contador de tempo para mensagem info
   useEffect(() => {
     if (!mensagemInfo) {
@@ -72,7 +86,7 @@ export default function LoginScreen() {
 
     const timer = setTimeout(() => {
       setMensagemInfo("");
-    }, 3000);
+    }, 7000);
 
     return () => {
       clearTimeout(timer);
@@ -181,7 +195,7 @@ export default function LoginScreen() {
     const emailAlvo = emailReset.trim();
 
     if (!emailAlvo) {
-      setErro("Informe o e-mail para redefinir a senha.");
+      setErroReset("Informe o e-mail para redefinir a senha.");
       return;
     }
 
@@ -197,21 +211,26 @@ export default function LoginScreen() {
 
       setModalResetOpen(false);
       setMensagemInfo(
-        "Enviamos um link para redefinir sua senha. Verifique seu e-mail (Não se esqueça de verificar a caixa de spam e lixeira)."
-      );
+      <p className="flex justify-center">
+      Enviamos um link para redefinir sua senha 
+      <br />
+      Verifique seu e-mail, caixa de spam e lixeira.
+      </p>);
       setEmailReset("");
     } catch (err) {
       console.error("Erro ao enviar reset de senha:", err);
 
       let msg = "Não foi possível enviar o e-mail de redefinição.";
+
       if (err.code === "auth/user-not-found") {
         msg = "Não existe uma conta cadastrada com este e-mail.";
       } else if (err.code === "auth/invalid-email") {
         msg = "E-mail inválido. Verifique e tente novamente.";
       }
 
-      setErro(msg);
-    } finally {
+      setErroReset(msg);
+    }
+    finally {
       setResetLoading(false);
     }
   }
@@ -240,6 +259,7 @@ export default function LoginScreen() {
               type="button"
               onClick={() => {
                 setErro("");
+                setErroReset("");
                 setMensagemInfo("");
                 setEmailReset(email);
                 setModalResetOpen(true);
@@ -403,6 +423,12 @@ export default function LoginScreen() {
               <p className="text-gray-700 text-sm mb-4">
                 Informe o e-mail cadastrado para enviarmos um link de redefinição.
               </p>
+              {erroReset && (
+                <div className="mb-3 rounded-md bg-red-50 text-red-700 p-2 text-sm">
+                  {erroReset}
+                </div>
+              )}
+
 
               <input
                 type="email"
@@ -416,6 +442,7 @@ export default function LoginScreen() {
                 <Button
                   onClick={() => {
                     if (!resetLoading) {
+                      setErroReset("");
                       setModalResetOpen(false);
                     }
                   }}

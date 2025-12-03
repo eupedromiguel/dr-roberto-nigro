@@ -137,9 +137,9 @@ export default function ActionHandler() {
       handleAction();
     } else {
       setStatus("error");
-      setMessage("Parâmetros inválidos. Tente novamente.");
+      setMessage("Link expirado.");
     }
-  }, [mode, actionCode, continueUrl]); // 🔹 status removido daqui
+  }, [mode, actionCode, continueUrl]); 
 
   // =============================================================
   // Confirmação da nova senha
