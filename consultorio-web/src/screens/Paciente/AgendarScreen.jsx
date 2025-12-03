@@ -203,24 +203,43 @@ export default function AgendarScreen() {
   }, [role]);
 
 
-  // Bloqueio: não pode agendar se houver retorno pendente ou consulta ativa com o mesmo médico
   async function handleAgendar(slot) {
     try {
-      setLoadingSlotId(slot.id); // ativa o spinner
+      setLoadingSlotId(slot.id);
       const userId = auth.currentUser?.uid;
 
-      // Busca consultas ou retornos pendentes com o mesmo médico
-      const q = query(
+      // Monta exatamente no mesmo formato salvo no banco
+    const horarioSlot = `${slot.data} ${slot.hora}`.trim();
+
+    // Busca por conflito com QUALQUER médico no mesmo horário
+    const conflitoQuery = query(
+      collection(db, "appointments"),
+      where("pacienteId", "==", userId),
+      where("horario", "==", horarioSlot),
+      where("status", "in", ["agendado", "confirmado", "retorno"])
+    );
+
+    const conflitoSnap = await getDocs(conflitoQuery);
+
+    if (!conflitoSnap.empty) {
+      notify(
+        "Você já possui uma consulta marcada nesse dia e horário.",
+        "error"
+      );
+      return;
+    }
+
+      // 2) BLOQUEIO EXTRA: MESMO MÉDICO (SEU CÓDIGO ORIGINAL, MANTIDO)
+      const mesmaMedicoQuery = query(
         collection(db, "appointments"),
         where("pacienteId", "==", userId),
         where("medicoId", "==", slot.medicoId),
         where("status", "in", ["agendado", "confirmado", "retorno"])
       );
 
-      const snap = await getDocs(q);
+      const snap = await getDocs(mesmaMedicoQuery);
 
       if (!snap.empty) {
-        // Verifica se é um retorno pendente especificamente
         const temRetorno = snap.docs.some(
           (doc) => doc.data().status === "retorno"
         );
@@ -239,15 +258,16 @@ export default function AgendarScreen() {
         return;
       }
 
-      // Permite agendar normalmente se não houver retorno ou consulta ativa
+      // 3) LIBERADO
       navigate(`/paciente/confirmar-agendamento/${slot.id}`);
     } catch (err) {
       console.error(err);
-      notify("Erro ao verificar consultas ativas.", "error");
+      notify("Erro ao verificar disponibilidade.", "error");
     } finally {
       setLoadingSlotId(null);
     }
   }
+
 
 
   // Agrupar slots por médico e data
