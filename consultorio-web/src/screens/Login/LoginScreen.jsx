@@ -5,7 +5,7 @@ import {
   RecaptchaVerifier,
   signInWithCredential,
   PhoneMultiFactorGenerator,
-  sendPasswordResetEmail, 
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { auth } from "../../services/firebase";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,7 +19,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
-  const [mensagemInfo, setMensagemInfo] = useState(""); 
+  const [mensagemInfo, setMensagemInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
@@ -44,7 +44,7 @@ export default function LoginScreen() {
       if (window.recaptchaVerifier) {
         try {
           window.recaptchaVerifier.clear();
-        } catch {}
+        } catch { }
         window.recaptchaVerifier = null;
       }
 
@@ -66,18 +66,18 @@ export default function LoginScreen() {
 
   // Contador de tempo para mensagem info
   useEffect(() => {
-  if (!mensagemInfo) {
-    return;
-  }
+    if (!mensagemInfo) {
+      return;
+    }
 
-  const timer = setTimeout(() => {
-    setMensagemInfo("");
-  }, 3000);
+    const timer = setTimeout(() => {
+      setMensagemInfo("");
+    }, 3000);
 
-  return () => {
-    clearTimeout(timer);
-  };
-}, [mensagemInfo]);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [mensagemInfo]);
 
 
   // Contador reenvio
@@ -222,13 +222,36 @@ export default function LoginScreen() {
       <AuthCard
         title="Entrar"
         footer={
-          <>
-            Não tem conta?{" "}
-            <Link className="text-yellow-500 hover:underline" to="/register">
-              Cadastre-se
-            </Link>
-          </>
+          <div className="flex items-center justify-between text-sm text-gray-400 w-full">
+
+            {/* Lado esquerdo */}
+            <div>
+              Não tem conta?{" "}
+              <Link
+                to="/register"
+                className="text-yellow-500 hover:underline font-normal"
+              >
+                Cadastre-se
+              </Link>
+            </div>
+
+            {/* Lado direito */}
+            <button
+              type="button"
+              onClick={() => {
+                setErro("");
+                setMensagemInfo("");
+                setEmailReset(email);
+                setModalResetOpen(true);
+              }}
+              className="text-sm font-normal hover:text-yellow-500 hover:underline"
+            >
+              Esqueci minha senha
+            </button>
+
+          </div>
         }
+
       >
         {erro && (
           <div className="mb-3 rounded-md bg-red-50 text-red-700 p-2 text-sm">
@@ -273,21 +296,7 @@ export default function LoginScreen() {
             </button>
           </div>
 
-          {/* link Esqueci minha senha */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setErro("");
-                setMensagemInfo("");
-                setEmailReset(email); 
-                setModalResetOpen(true);
-              }}
-              className="text-xs text-gray-600 hover:text-yellow-500 hover:underline"
-            >
-              Esqueci minha senha
-            </button>
-          </div>
+
 
           <Button
             type="submit"

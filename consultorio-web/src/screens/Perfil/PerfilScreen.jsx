@@ -11,7 +11,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
-import { Eye, EyeOff, Loader2, User, UserRound, Mail, Phone, CreditCard, Calendar, CheckCircle, AlertCircle, Edit, Trash2, LogOut } from "lucide-react";
+import { Eye, EyeOff, Loader2, User, UserRound, Mail, Phone, CreditCard, Calendar, CheckCircle, AlertCircle, Edit, Trash2, Lock, PhoneForwarded, LogOut } from "lucide-react";
 import { IMaskInput } from "react-imask";
 
 export default function PerfilScreen() {
@@ -81,7 +81,7 @@ export default function PerfilScreen() {
         } catch (e) {
           // Ignora apenas o erro esperado (campo não aceito)
           if (!e.message.includes("Nenhum campo válido")) {
-            console.warn("⚠️ Falha real ao sincronizar emailVerificado no Firestore:", e.message);
+            console.warn("Falha real ao sincronizar emailVerificado no Firestore:", e.message);
           }
         }
       }
@@ -159,9 +159,12 @@ export default function PerfilScreen() {
       setSalvando(true);
 
       if (!senha.trim()) {
-        setErro("Digite sua senha para confirmar a atualização.");
+        setErroModal("Digite sua senha para confirmar a atualização.");
+        setSalvando(false);
         return;
       }
+
+
 
       if (!validarDataNascimento(formData.dataNascimento)) {
         setErroModal("Data de nascimento inválida. Use o formato DD/MM/AAAA e uma data real.");
@@ -173,7 +176,8 @@ export default function PerfilScreen() {
       const currentAuth = auth;
       const currentUser = auth.currentUser;
       if (!currentUser?.email) {
-        setErro("Usuário inválido ou não autenticado.");
+        setErroModal("Usuário inválido ou não autenticado.");
+        setSalvando(false);
         return;
       }
 
@@ -194,15 +198,16 @@ export default function PerfilScreen() {
         setSenha("");
         await carregarPerfil();
       } else {
-        setErro(res.data?.erro || "Erro ao atualizar perfil.");
+        setErroModal(res.data?.erro || "Erro ao atualizar perfil.");
       }
+
     } catch (e) {
       if (e.message.includes("already-exists")) {
-        if (e.message.includes("Telefone")) setErroModal("❌ Telefone já cadastrado.");
-        else if (e.message.includes("CPF")) setErroModal("❌ CPF já cadastrado.");
-        else setErroModal("❌ Já existe um usuário com esses dados.");
+        if (e.message.includes("Telefone")) setErroModal(" Telefone já cadastrado.");
+        else if (e.message.includes("CPF")) setErroModal("CPF já cadastrado.");
+        else setErroModal("Já existe um usuário com esses dados.");
       } else if (e.message.includes("Senha incorreta")) {
-        setErroModal("❌ Senha incorreta. Tente novamente.");
+        setErroModal("Senha incorreta. Tente novamente.");
       } else {
         setErroModal(e.message || String(e));
       }
@@ -223,8 +228,10 @@ export default function PerfilScreen() {
 
       if (!novoEmail.trim()) {
         setErroModal("Informe um novo e-mail.");
+        setSalvando(false);
         return;
       }
+
 
       const currentAuth = auth;
       const currentUser = currentAuth.currentUser;
@@ -232,8 +239,10 @@ export default function PerfilScreen() {
 
       if (!senha.trim()) {
         setErroModal("Digite sua senha para confirmar a alteração de e-mail.");
+        setSalvando(false);
         return;
       }
+
 
       // Reautentica o usuário
       const cred = EmailAuthProvider.credential(currentUser.email, senha);
@@ -263,13 +272,13 @@ export default function PerfilScreen() {
       const msg = e.message || "";
 
       if (code === "auth/email-already-in-use" || msg.includes("already-exists")) {
-        setErroModal("❌ Este e-mail já está em uso por outro usuário.");
+        setErroModal("Este e-mail já está em uso por outro usuário.");
       } else if (code === "auth/requires-recent-login") {
-        setErroModal("⚠️ Sessão expirada. Faça login novamente para alterar o e-mail.");
+        setErroModal("Sessão expirada. Faça login novamente para alterar o e-mail.");
       } else if (code === "auth/invalid-email") {
-        setErroModal("❌ E-mail inválido. Verifique o formato e tente novamente.");
+        setErroModal("E-mail inválido. Verifique o formato e tente novamente.");
       } else {
-        setErroModal("❌ Erro ao atualizar e-mail. " + (msg || "Tente novamente."));
+        setErroModal("Erro ao atualizar e-mail. " + (msg || "Tente novamente."));
       }
     } finally {
       setSalvando(false);
@@ -284,20 +293,27 @@ export default function PerfilScreen() {
       setSalvando(true);
 
       if (!senha || !confirmarSenha) {
-        setErro("Preencha ambos os campos de senha.");
+        setErroModal("Preencha ambos os campos de senha.");
+        setSalvando(false);
         return;
       }
-      if (senha !== confirmarSenha) {
-        setErro("As senhas não coincidem.");
-        return;
-      }
+
+if (senha !== confirmarSenha) {
+  setErroModal("As senhas não coincidem.");
+  setSalvando(false);
+  return;
+}
+
+
 
       const auth = getAuth();
       const currentUser = auth.currentUser;
       if (!currentUser?.email) {
-        setErro("Usuário inválido ou não autenticado.");
+        setErroModal("Usuário inválido ou não autenticado.");
+        setSalvando(false);
         return;
       }
+
 
       const cred = EmailAuthProvider.credential(currentUser.email, senha);
       await reauthenticateWithCredential(currentUser, cred).catch(() => {
@@ -314,13 +330,14 @@ export default function PerfilScreen() {
         setMostrarSenha(false);
         setMostrarSenhaConfirmar(false);
       } else {
-        setErro(res.data?.erro || "Erro ao excluir conta.");
+        setErroModal(res.data?.erro || "Erro ao excluir conta.");
       }
     } catch (e) {
       if (e.message.includes("Senha incorreta")) {
-        setErro("❌ Senha incorreta. Tente novamente.");
-      } else {
-        setErro(e.message || String(e));
+        setErroModal("Senha incorreta. Tente novamente.");
+      }
+      else {
+        setErroModal(e.message || String(e));
       }
     } finally {
       setSalvando(false);
@@ -425,78 +442,113 @@ export default function PerfilScreen() {
         {mensagem && <p className="text-green-700 mt-2 font-medium">{mensagem}</p>}
       </div>
 
-      {/* Ações */}
-      {!carregandoPerfil && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-          <Button
-            className="bg-gray-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-2"
-            onClick={() => {
-              setErro("");
-              setMensagem("");
-              setErroModal("");
-              setMensagemModal("");
-              setSenha("");
-              if (perfil?.dataNascimento) {
-                const p = perfil.dataNascimento.split(/[\/\-]/);
-                let dd, mm, yyyy;
-                if (p[0]?.length === 4) [yyyy, mm, dd] = p;
-                else[dd, mm, yyyy] = p;
-                setFormData((prev) => ({
-                  ...prev,
-                  dataNascimento: `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${yyyy}`,
-                }));
+
+
+
+      {/*Ações*/}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+
+        <Button
+          className="bg-gray-500 hover:bg-yellow-400 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
+          onClick={() => {
+            setErro("");
+            setMensagem("");
+            setErroModal("");
+            setMensagemModal("");
+            setSenha("");
+
+            if (perfil?.dataNascimento) {
+              const p = perfil.dataNascimento.split(/[\/\-]/);
+
+              let dd, mm, yyyy;
+
+              if (p[0]?.length === 4) {
+                [yyyy, mm, dd] = p;
+              } else {
+                [dd, mm, yyyy] = p;
               }
-              setModo("atualizar");
-            }}
-          >
-            <Edit size={18} /> Editar
-          </Button>
 
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-            onClick={() => {
-              setErro("");
-              setMensagem("");
-              setErroModal("");
-              setMensagemModal("");
-              setNovoEmail("");
-              setSenha("");
-              setModo("email");
-            }}
-          >
-            <Mail size={18} /> Meu e-mail
-          </Button>
+              setFormData((prev) => ({
+                ...prev,
+                dataNascimento: `${String(dd).padStart(2, "0")}/${String(mm).padStart(2, "0")}/${yyyy}`,
+              }));
+            }
 
-          <Button
-            className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2"
-            onClick={() => {
-              setErro("");
-              setMensagem("");
-              setSenha("");
-              setConfirmarSenha("");
-              setMostrarSenha(false);
-              setMostrarSenhaConfirmar(false);
-              setModo("excluir");
-            }}
-          >
-            <Trash2 size={18} /> Excluir
-          </Button>
+            setModo("atualizar");
+          }}
+        >
+          <Edit size={14} />
+          Editar
+        </Button>
 
-          <Button
-            className="bg-gray-800 hover:bg-gray-900 text-white flex items-center justify-center gap-2"
-            onClick={logout}
-          >
-            <LogOut size={18} /> Sair
-          </Button>
-        </div>
-      )}
+        <Button
+          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
+          onClick={() => {
+            setErro("");
+            setMensagem("");
+            setErroModal("");
+            setMensagemModal("");
+            setNovoEmail("");
+            setSenha("");
+            setModo("email");
+          }}
+        >
+          <Mail size={14} />
+          Mudar e-mail
+        </Button>
+
+        <Button
+          className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
+          onClick={() => {
+          }}
+        >
+          <PhoneForwarded size={14} />
+          Mudar telefone
+        </Button>
+
+        <Button
+          className="bg-gray-800 hover:bg-gray-900 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
+          onClick={() => {
+          }}
+        >
+          <Lock size={14} />
+          Mudar senha
+        </Button>
+
+
+      </div>
+
+      <div className="w-full flex justify-center mt-3">
+        <span
+          onClick={() => {
+            setErro("");
+            setMensagem("");
+            setSenha("");
+            setConfirmarSenha("");
+            setMostrarSenha(false);
+            setMostrarSenhaConfirmar(false);
+            setModo("excluir");
+          }}
+          className="
+      text-xs 
+      text-red-600 
+      hover:text-red-700 
+      hover:underline 
+      cursor-pointer 
+      transition
+    "
+        >
+          Excluir minha conta
+        </span>
+      </div>
+
 
 
       {/* Modal principal */}
       {modo && modo !== "excluido" && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl p-6 w-80 relative">
-            <h3 className="text-lg font-semibold mb-3 text-gray-900">
+            <h3 className="flex justify-center text-lg font-semibold mb-3 text-gray-900">
               {modo === "atualizar" && "Atualizar Dados"}
               {modo === "email" && "Atualizar e-mail"}
               {modo === "excluir" && "Excluir Conta"}
@@ -525,16 +577,6 @@ export default function PerfilScreen() {
                   />
                 </label>
 
-                <label className="block text-sm text-gray-700">
-                  Telefone:
-                  <IMaskInput
-                    mask="(00) 00000-0000"
-                    placeholder="(00) 00000-0000"
-                    value={formData.telefone}
-                    onAccept={(v) => setFormData({ ...formData, telefone: v })}
-                    className="w-full border border-gray-500 rounded px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                  />
-                </label>
 
                 <label className="block text-sm text-gray-700">
                   CPF:
@@ -600,26 +642,26 @@ export default function PerfilScreen() {
 
 
                 <label className="block text-sm text-gray-700">
-  Digite sua senha para confirmar alterações:
+                  Digite sua senha para confirmar alterações:
 
-  <div className="relative mt-1">
-    <input
-      type={mostrarSenha ? "text" : "password"}
-      value={senha}
-      onChange={(e) => setSenha(e.target.value)}
-      className="w-full border border-gray-500 rounded px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-      placeholder="Senha atual"
-    />
+                  <div className="relative mt-1">
+                    <input
+                      type={mostrarSenha ? "text" : "password"}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      className="w-full border border-gray-500 rounded px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      placeholder="Senha atual"
+                    />
 
-    <button
-      type="button"
-      onClick={() => setMostrarSenha(v => !v)}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-    >
-      {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
-    </button>
-  </div>
-</label>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarSenha(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </label>
 
 
                 <Button
@@ -676,9 +718,12 @@ export default function PerfilScreen() {
 
             {/* Excluir conta */}
             {modo === "excluir" && (
-              <div className="space-y-3">
+              <div className="space-y-2">
+                <p className="w-full flex justify-center text-sm text-red-500">Esta é uma ação irreversível.
+                </p>
+                <p className="w-full flex justify-center text-xs">Para continuar, informe sua senha atual abaixo.</p>
                 <label className="block text-sm text-gray-700 relative">
-                  Digite sua nova senha:
+                  Digite sua senha:
                   <input
                     type={mostrarSenha ? "text" : "password"}
                     value={senha}
@@ -695,7 +740,7 @@ export default function PerfilScreen() {
                 </label>
 
                 <label className="block text-sm text-gray-700 relative">
-                  Repetir senha nova:
+                  Repita sua senha:
                   <input
                     type={mostrarSenhaConfirmar ? "text" : "password"}
                     value={confirmarSenha}

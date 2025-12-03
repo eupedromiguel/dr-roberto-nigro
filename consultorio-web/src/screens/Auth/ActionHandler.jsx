@@ -177,7 +177,7 @@ export default function ActionHandler() {
   // Interface visual
   // =============================================================
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-800">
+    <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-900">
       <div className="max-w-md w-full bg-white shadow-xl rounded-2xl p-8">
         {status === "loading" && <p>Carregando...</p>}
 
@@ -210,7 +210,7 @@ export default function ActionHandler() {
               <input
                 type="password"
                 placeholder="Nova senha"
-                className="border border-gray-300 rounded-lg px-3 py-2 w-full"
+                className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
@@ -218,7 +218,7 @@ export default function ActionHandler() {
               <input
                 type="password"
                 placeholder="Confirme a nova senha"
-                className="border border-gray-300 rounded-lg px-3 py-2 w-full"
+                className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
