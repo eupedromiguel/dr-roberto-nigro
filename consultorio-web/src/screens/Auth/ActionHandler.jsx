@@ -42,7 +42,7 @@ export default function ActionHandler() {
               try {
                 await auth.signOut();
               } catch (signOutErr) {
-                console.warn("⚠️ Falha ao deslogar antes da verificação:", signOutErr);
+                console.warn("Falha ao deslogar antes da verificação:", signOutErr);
               }
 
               // Valida e aplica o código
@@ -51,7 +51,7 @@ export default function ActionHandler() {
 
               // Mostra sucesso
               setStatus("success");
-              setMessage("✅ E-mail verificado com sucesso!");
+              setMessage("E-mail verificado com sucesso!");
 
               // Evita reexecução do efeito
               sessionStorage.setItem("emailVerifiedOnce", "true");
@@ -69,17 +69,17 @@ export default function ActionHandler() {
                 }
               }, 30000);
             } catch (err) {
-              console.warn("⚠️ Erro ao verificar e-mail:", err);
+              console.warn("Erro ao verificar e-mail:", err);
 
               if (sessionStorage.getItem("emailVerifiedOnce") === "true") {
                 setStatus("success");
-                setMessage("✅ E-mail verificado.");
+                setMessage("E-mail verificado.");
                 break;
               }
 
               setStatus("error");
               setMessage(
-                "⚠️ Este link já foi usado ou expirou. Se seu e-mail não estiver verificado, tente reenviar a confirmação."
+                "Este link já foi usado ou expirou. Se seu e-mail não estiver verificado, tente reenviar a confirmação."
               );
             }
             break;
@@ -104,7 +104,7 @@ export default function ActionHandler() {
             await sendPasswordResetEmail(auth, restoredEmail);
             setStatus("success");
             setMessage(
-              `📧 O e-mail foi revertido para ${restoredEmail}. Verifique sua caixa de entrada.`
+              `O e-mail foi revertido para ${restoredEmail}. Verifique sua caixa de entrada.`
             );
             break;
           }
@@ -119,7 +119,7 @@ export default function ActionHandler() {
       } catch (err) {
         console.error("Erro no link do Firebase:", err);
         setStatus("error");
-        setMessage("⚠️ O link é inválido ou já expirou. Tente novamente.");
+        setMessage("O link é inválido ou já expirou. Tente novamente.");
       }
     }
 
@@ -133,10 +133,10 @@ export default function ActionHandler() {
     try {
       await confirmPasswordReset(auth, actionCode, newPassword);
       setStatus("success");
-      setMessage("🔑 Senha redefinida com sucesso!");
+      setMessage("Senha redefinida com sucesso!");
     } catch (error) {
       console.error(error);
-      setMessage("❌ Erro ao redefinir senha. Tente novamente.");
+      setMessage("Erro ao redefinir senha. Tente novamente.");
     }
   }
 

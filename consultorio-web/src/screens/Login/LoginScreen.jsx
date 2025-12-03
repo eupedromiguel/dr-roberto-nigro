@@ -47,7 +47,7 @@ export default function LoginScreen() {
         size: "invisible",
         callback: () => console.log("reCAPTCHA verificado"),
         "expired-callback": () =>
-          console.warn("⚠️ reCAPTCHA expirado, recarregue a página"),
+          console.warn("reCAPTCHA expirado, recarregue a página"),
       });
 
       await verifier.render();
@@ -79,7 +79,7 @@ export default function LoginScreen() {
       setMostrarSucesso(true);
     } catch (err) {
       if (err.code === "auth/multi-factor-auth-required") {
-        console.log("⚙️ MFA exigida");
+        console.log("MFA exigida");
         const resolver = err.resolver;
         setMfaResolver(resolver);
 
@@ -327,7 +327,7 @@ export default function LoginScreen() {
                 Login realizado com sucesso!
               </h2>
               <p className="text-gray-700 text-sm mb-6">
-                Bem-vindo de volta 👋 Sua autenticação foi concluída com sucesso.
+                Bem-vindo de volta. Sua autenticação foi concluída com sucesso.
               </p>
 
               <Button
