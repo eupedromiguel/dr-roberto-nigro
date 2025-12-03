@@ -42,8 +42,8 @@ export default function Navbar() {
       { label: "Agendamentos", path: "/paciente/agendamentos", icon: ClipboardList },
     ],
     doctor: [
-      { label: "Vagas", path: "/medico/agenda", icon: Calendar },
-      { label: "Agenda", path: "/medico/consultas", icon: ClipboardList },
+      { label: "Slots", path: "/medico/agenda", icon: Calendar },
+      { label: "Consultas", path: "/medico/consultas", icon: ClipboardList },
       { label: "Meu perfil", path: "/perfil", icon: User },
     ],
     admin: [

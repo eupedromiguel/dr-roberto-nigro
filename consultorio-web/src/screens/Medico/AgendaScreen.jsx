@@ -35,6 +35,22 @@ function isPastDateTime(dia, hora) {
   return dt.getTime() <= agora.getTime();
 }
 
+function abrirEmNovaAbaSeguro(url) {
+  const novaAba = window.open(url, "_blank");
+
+  if (!novaAba) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+}
+
+
 
 // ------------------------------
 // Modal simples
@@ -275,39 +291,6 @@ export default function AgendaScreen() {
   }
 
 
-
-
-
-
-
-  async function abrirAppointmentDoSlot(slotId) {
-    try {
-      const fn = httpsCallable(functions, "medicos-buscarAppointmentPorSlot");
-      const res = await fn({ slotId });
-
-      if (!res.data?.sucesso || !res.data?.appointment) {
-        notify("Não foi possível localizar a consulta deste horário.", "error");
-        return;
-      }
-
-      const consultaId = res.data.appointment.id;
-
-      // Base da URL depende se é médico ou admin
-      const basePath =
-        role === "admin"
-          ? `/medico/consultas/${medicoId}`
-          : "/medico/consultas";
-
-      const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
-
-      // Abrir em nova aba
-      window.open(url, "_blank", "noopener,noreferrer");
-
-    } catch (e) {
-      console.error(e);
-      notify("Erro ao buscar dados da consulta.", "error");
-    }
-  }
 
 
 
@@ -1118,7 +1101,8 @@ export default function AgendaScreen() {
 
                                     const url = `${basePath}?consulta=${encodeURIComponent(consultaId)}`;
 
-                                    window.open(url, "_blank", "noopener,noreferrer");
+                                    abrirEmNovaAbaSeguro(url);
+
                                   }}
                                   className={`${slot.status === "ocupado" ? "cursor-pointer hover:underline" : ""} text-white font-medium`}
                                 >

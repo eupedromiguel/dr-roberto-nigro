@@ -30,7 +30,7 @@ export default function SidebarAdmin() {
     { label: "Gerenciar usuários", path: "/admin/usuarios", icon: Users },
     { label: "Gerenciar médicos", path: "/admin/medicos", icon: Stethoscope },
     { label: "Gerenciar convênios", path: "/admin/planos", icon: IdCardLanyard },
-    { label: "Gerenciar agendas", path: "/admin/agendas", icon: CalendarCog },
+    { label: "Gerenciar consultas", path: "/admin/agendas", icon: CalendarCog },
     { label: "Gerenciar slots", path: "/admin/slots", icon: BetweenHorizontalEnd },
     { label: "Relatórios", path: "/admin/relatorios", icon: ChartNoAxesCombined },
     { label: "Meu perfil", path: "/perfil", icon: Settings },
@@ -50,7 +50,7 @@ export default function SidebarAdmin() {
       {/* ====================== */}
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 bg-gray-800 border-r border-gray-800 flex-col">
         <div className="p-4 border-b border-gray-800 text-yellow-400 text-lg font-light print:hidden">
-          Painel Administrativo
+          Administrador
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -76,7 +76,7 @@ export default function SidebarAdmin() {
       <nav className="md:hidden fixed top-0 left-0 right-0 bg-gray-800 border-b border-gray-800 z-50">
         <div className="flex items-center justify-between px-4 py-2">
           <h1 className="absolute left-1/2 transform -translate-x-1/2 text-yellow-400 font-light text-lg text-center print:hidden">
-            Painel Administrativo
+            Administrador
           </h1>
 
           <button
