@@ -256,11 +256,13 @@ export default function PerfilScreen() {
 
       if (!novoEmail.trim()) {
         setErroModal("Informe o novo e-mail.");
+        setSalvando(false);
         return;
       }
 
       if (!senha.trim()) {
         setErroModal("Digite sua senha para confirmar a alteração.");
+        setSalvando(false);
         return;
       }
 
@@ -268,31 +270,36 @@ export default function PerfilScreen() {
 
       if (!currentUser?.email) {
         setErroModal("Sessão inválida. Faça login novamente.");
+        setSalvando(false);
         return;
       }
 
-      // 1. Reautenticar usuário
+      // Reautenticar usuário
       const cred = EmailAuthProvider.credential(currentUser.email, senha);
-
       await reauthenticateWithCredential(currentUser, cred).catch(() => {
         throw new Error("Senha incorreta.");
       });
 
-      // 2. Chamar Cloud Function segura
-      const solicitarTroca = httpsCallable(functions, "usuarios-solicitarTrocaEmail");
+      console.log("NOVO EMAIL:", novoEmail);
+
+      // Chamar Cloud Function correta
+      const solicitarTroca = httpsCallable(functions, "notificacoes-solicitarTrocaEmail");
 
       const res = await solicitarTroca({
         novoEmail: novoEmail.trim(),
       });
 
+      console.log("NOVO EMAIL:", novoEmail);
+
       if (res.data?.sucesso) {
         setMensagemModal(
-          "Enviamos um link de confirmação para o novo e-mail. A alteração só será aplicada após a confirmação."
+          "Enviamos um link de confirmação ao novo e-mail. A alteração só será feita após a confirmação."
         );
 
         setNovoEmail("");
         setSenha("");
         setModo(null);
+        setSalvando(false);
         return;
       }
 
@@ -300,23 +307,23 @@ export default function PerfilScreen() {
     } catch (e) {
       const msg = e.message || "";
 
-      if (msg.includes("Senha incorreta")) {
+      if (msg.toLowerCase().includes("senha")) {
         setErroModal("Senha incorreta.");
       }
-      else if (msg.includes("email-already-in-use")) {
+      else if (msg.includes("already-exists")) {
         setErroModal("Este e-mail já está em uso.");
       }
-      else if (msg.includes("invalid-email")) {
+      else if (msg.includes("invalid")) {
         setErroModal("Formato de e-mail inválido.");
       }
       else {
-        setErroModal("Erro ao tentar atualizar e-mail.");
+        setErroModal("Erro ao solicitar troca de e-mail.");
       }
-
     } finally {
       setSalvando(false);
     }
   }
+
 
 
 

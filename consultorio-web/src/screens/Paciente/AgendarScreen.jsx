@@ -209,25 +209,25 @@ export default function AgendarScreen() {
       const userId = auth.currentUser?.uid;
 
       // Monta exatamente no mesmo formato salvo no banco
-    const horarioSlot = `${slot.data} ${slot.hora}`.trim();
+      const horarioSlot = `${slot.data} ${slot.hora}`.trim();
 
-    // Busca por conflito com QUALQUER médico no mesmo horário
-    const conflitoQuery = query(
-      collection(db, "appointments"),
-      where("pacienteId", "==", userId),
-      where("horario", "==", horarioSlot),
-      where("status", "in", ["agendado", "confirmado", "retorno"])
-    );
-
-    const conflitoSnap = await getDocs(conflitoQuery);
-
-    if (!conflitoSnap.empty) {
-      notify(
-        "Você já possui uma consulta marcada nesse dia e horário.",
-        "error"
+      // Busca por conflito com QUALQUER médico no mesmo horário
+      const conflitoQuery = query(
+        collection(db, "appointments"),
+        where("pacienteId", "==", userId),
+        where("horario", "==", horarioSlot),
+        where("status", "in", ["agendado", "confirmado", "retorno"])
       );
-      return;
-    }
+
+      const conflitoSnap = await getDocs(conflitoQuery);
+
+      if (!conflitoSnap.empty) {
+        notify(
+          "Você já possui uma consulta marcada nesse dia e horário.",
+          "error"
+        );
+        return;
+      }
 
       // 2) BLOQUEIO EXTRA: MESMO MÉDICO (SEU CÓDIGO ORIGINAL, MANTIDO)
       const mesmaMedicoQuery = query(
@@ -311,15 +311,9 @@ export default function AgendarScreen() {
       <div className="max-w-xl mx-auto p-8 text-center bg-white rounded-xl shadow-md">
         <MailWarning size={50} className="max-w-xl mx-auto text-yellow-500 text-center" />
         <p className="text-lg font-semibold text-gray-950 mb-2">
-          Verifique seu e-mail.
-        </p>
-        <p className="text-sm font-semibold text-gray-600 mb-4">
-          Ao criar sua conta enviamos um link para seu e-mail, não se esqueça de verificar o Spam e a Lixeira.
+          Confirme seu e-mail.
         </p>
         <p className="
-  border 
-  border-gray-400 
-  rounded-full 
   text-sm 
   text-gray-600
   font-normal 
@@ -327,8 +321,10 @@ export default function AgendarScreen() {
   px-4 
   py-2
 ">
-  Você também pode ir até a página <b>Meu Perfil</b> e solicitar um novo link de verificação.
-</p>
+          Para agendar uma consulta, é necessário confirmar seu e-mail.
+          Verifique também a caixa de spam ou lixeira.
+          Caso não encontre, acesse a página <b>Meu Perfil</b> e solicite um novo link de verificação.
+        </p>
 
       </div>
     );
