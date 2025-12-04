@@ -31,6 +31,8 @@ export default function PerfilScreen() {
   const [erroModal, setErroModal] = useState("");
   const [mensagemModal, setMensagemModal] = useState("");
   const [emailVerificado, setEmailVerificado] = useState(false);
+  const [reenviandoEmail, setReenviandoEmail] = useState(false);
+
 
 
 
@@ -122,30 +124,56 @@ export default function PerfilScreen() {
   }
 
   function validarDataNascimento(dataStr) {
-    if (!dataStr) return false;
 
-    const [dd, mm, yyyy] = dataStr.split("/").map(Number);
+    if (!dataStr) {
+      return false;
+    }
 
-    // Formato básico
-    if (!dd || !mm || !yyyy || dataStr.length !== 10) return false;
+    // Garante o formato exatamente DD/MM/AAAA
+    const formatoValido = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    if (!formatoValido.test(dataStr)) {
+      return false;
+    }
+
+    const partes = dataStr.split("/");
+    const dd = Number(partes[0]);
+    const mm = Number(partes[1]);
+    const yyyy = Number(partes[2]);
+
+    // Impede datas como 00/00/0000
+    if (dd === 0 || mm === 0 || yyyy === 0) {
+      return false;
+    }
 
     // Mês válido
-    if (mm < 1 || mm > 12) return false;
+    if (mm < 1 || mm > 12) {
+      return false;
+    }
 
     // Dia válido considerando meses e ano bissexto
     const diasNoMes = new Date(yyyy, mm, 0).getDate();
-    if (dd < 1 || dd > diasNoMes) return false;
+
+    if (dd < 1 || dd > diasNoMes) {
+      return false;
+    }
 
     // Impede datas futuras
     const hoje = new Date();
     const dataInformada = new Date(yyyy, mm - 1, dd);
-    if (dataInformada > hoje) return false;
 
-    // Impede datas muito antigas (ex: antes de 1900)
-    if (yyyy < 1900) return false;
+    if (dataInformada > hoje) {
+      return false;
+    }
+
+    // Impede datas absurdamente antigas
+    if (yyyy < 1900) {
+      return false;
+    }
 
     return true;
   }
+
 
 
   // Ações
@@ -408,34 +436,40 @@ export default function PerfilScreen() {
                 ) : (
                   <span
                     onClick={async () => {
+                      if (reenviandoEmail) return;
+
                       try {
+                        setErro("");
+                        setMensagem("");
+                        setReenviandoEmail(true);
+
                         await sendEmailVerification(auth.currentUser);
 
                         setMensagem("E-mail de verificação reenviado com sucesso!");
-                        setErro("");
                       } catch (e) {
                         console.error("Erro ao reenviar e-mail:", e);
                         setErro("Erro ao reenviar e-mail. Tente novamente.");
+                      } finally {
+                        setReenviandoEmail(false);
                       }
                     }}
-                    className="
-        text-red-500 
+                    className={`
         text-sm 
         flex 
         items-center 
         gap-1 
-        flex-shrink-0 
-        cursor-pointer
-        hover:underline
-        hover:text-red-400
-      "
-                    title="Clique para reenviar o e-mail de verificação"
+        flex-shrink-0
+        ${reenviandoEmail ? "text-gray-400 cursor-not-allowed" : "text-red-500 cursor-pointer hover:underline hover:text-red-400"}
+      `}
+                    title={reenviandoEmail ? "Enviando e-mail..." : "Clique para reenviar o e-mail"}
                   >
                     <AlertCircle size={10} />
-                    Não verificado - Reenviar link
+
+                    {reenviandoEmail ? "Enviando..." : "Não verificado - Reenviar link"}
                   </span>
                 )}
               </div>
+
 
 
 

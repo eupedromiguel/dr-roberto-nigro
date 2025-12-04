@@ -36,6 +36,8 @@ export default function RegisterScreen() {
   const [contador, setContador] = useState(0);
   const [mostrarSucesso, setMostrarSucesso] = useState(false);
   const [sexoBiologico, setSexoBiologico] = useState("");
+  const [dataNascimentoFormatada, setDataNascimentoFormatada] = useState(null);
+
 
 
   const navigate = useNavigate();
@@ -43,12 +45,73 @@ export default function RegisterScreen() {
   const minDate = "1930-01-01";
   const maxDate = `${anoAtual}-12-31`;
 
-  // contador de reenvio
+
+  useEffect(() => {
+    if (!erro) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setErro("");
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [erro]);
+
+
   useEffect(() => {
     if (contador <= 0) return;
     const t = setInterval(() => setContador((c) => c - 1), 1000);
     return () => clearInterval(t);
   }, [contador]);
+
+
+  function validarDataNascimento(dataStr) {
+
+    if (!dataStr) {
+      return false;
+    }
+
+    const formatoValido = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    if (!formatoValido.test(dataStr)) {
+      return false;
+    }
+
+    const partes = dataStr.split("/");
+    const dia = Number(partes[0]);
+    const mes = Number(partes[1]);
+    const ano = Number(partes[2]);
+
+    if (dia === 0 || mes === 0 || ano === 0) {
+      return false;
+    }
+
+    if (mes < 1 || mes > 12) {
+      return false;
+    }
+
+    const diasNoMes = new Date(ano, mes, 0).getDate();
+
+    if (dia < 1 || dia > diasNoMes) {
+      return false;
+    }
+
+    const hoje = new Date();
+    const dataInformada = new Date(ano, mes - 1, dia);
+
+    if (dataInformada > hoje) {
+      return false;
+    }
+
+    if (ano < 1900) {
+      return false;
+    }
+
+    return true;
+  }
+
+
+
+
 
   // Inicializa reCAPTCHA invisível
   async function initRecaptcha() {
@@ -62,16 +125,16 @@ export default function RegisterScreen() {
 
       const verifier = new RecaptchaVerifier(auth, "recaptcha-container", {
         size: "invisible",
-        callback: () => console.log("✅ reCAPTCHA verificado"),
+        callback: () => console.log("reCAPTCHA verificado"),
         "expired-callback": () =>
-          console.warn("⚠️ reCAPTCHA expirado, recarregue a página"),
+          console.warn("reCAPTCHA expirado, recarregue a página"),
       });
 
       await verifier.render();
       window.recaptchaVerifier = verifier;
       return verifier;
     } catch (err) {
-      console.error("❌ Erro ao inicializar reCAPTCHA:", err);
+      console.error("Erro ao inicializar reCAPTCHA:", err);
       throw err;
     }
   }
@@ -83,29 +146,55 @@ export default function RegisterScreen() {
     e.preventDefault();
     setErro("");
 
-    if (!nome.trim()) return setErro("Por favor, informe seu nome completo.");
-    if (!cpf.trim()) return setErro("Por favor, informe seu CPF.");
-    if (!dataNascimento) return setErro("Informe sua data de nascimento.");
-    if (!sexoBiologico.trim()) return setErro("Por favor, selecione seu sexo biológico.");
-    if (email !== confirmarEmail) return setErro("Os e-mails não coincidem.");
-    if (senha !== confirmarSenha) return setErro("As senhas não coincidem.");
-    if (!telefone.trim()) return setErro("Informe um telefone válido.");
+    // Validações básicas de campos
+    if (!nome.trim()) {
+      return setErro("Por favor, informe seu nome completo.");
+    }
+
+    if (!cpf.trim()) {
+      return setErro("Por favor, informe seu CPF.");
+    }
+
+    if (!dataNascimento) {
+      return setErro("Informe sua data de nascimento.");
+    }
+
+    if (!validarDataNascimento(dataNascimento)) {
+      return setErro("Data de nascimento inválida. Use DD/MM/AAAA.");
+    }
+
+    if (!sexoBiologico.trim()) {
+      return setErro("Por favor, selecione seu sexo biológico.");
+    }
+
+    if (email !== confirmarEmail) {
+      return setErro("Os e-mails não coincidem.");
+    }
+
+    if (senha !== confirmarSenha) {
+      return setErro("As senhas não coincidem.");
+    }
+
+    if (!telefone.trim()) {
+      return setErro("Informe um telefone válido.");
+    }
+
+    // Converte a data UMA VEZ só (DD/MM/AAAA -> YYYY-MM-DD)
+    const partesData = dataNascimento.split("/");
+    const dia = partesData[0];
+    const mes = partesData[1];
+    const ano = partesData[2];
+
+    const dataFormatada = `${ano}-${mes}-${dia}`;
+    setDataNascimentoFormatada(dataFormatada);
+
 
     try {
       setLoading(true);
 
-      // PASSO 1: 
+      // PASSO 1: validar duplicatas
       try {
         const validarDuplicatas = httpsCallable(functions, "usuarios-validarDuplicatas");
-
-        let dataFormatada = null;
-        if (dataNascimento && dataNascimento.includes("/")) {
-          const [dia, mes, ano] = dataNascimento.split("/");
-          dataFormatada = `${ano}-${mes}-${dia}`;
-        } else {
-          dataFormatada = dataNascimento || null;
-        }
-
 
         await validarDuplicatas({
           email,
@@ -113,17 +202,17 @@ export default function RegisterScreen() {
           cpf,
           dataNascimento: dataFormatada,
         });
+
       } catch (validErr) {
-        console.error("⚠️ Duplicidade detectada:", validErr);
+        console.error("Duplicidade detectada:", validErr);
         const msg = validErr?.message || "";
 
-        // Tratamentos separados por tipo
         if (msg.includes("E-mail já cadastrado")) {
-          setErro("⚠️ Este e-mail já está em uso por outra conta.");
+          setErro("Este e-mail já está em uso por outra conta.");
         } else if (msg.includes("Telefone já cadastrado")) {
-          setErro("⚠️ Este telefone já está em uso por outra conta.");
+          setErro("Este telefone já está em uso por outra conta.");
         } else if (msg.includes("CPF já cadastrado")) {
-          setErro("⚠️ Este CPF já está em uso por outra conta.");
+          setErro("Este CPF já está em uso por outra conta.");
         } else {
           setErro("Erro ao validar informações. Tente novamente.");
         }
@@ -131,10 +220,9 @@ export default function RegisterScreen() {
         return;
       }
 
-
       // PASSO 2: Encerra sessão anterior (se houver)
       if (auth.currentUser) {
-        console.log("👋 Encerrando sessão anterior...");
+        console.log("Encerrando sessão anterior...");
         await signOut(auth);
       }
 
@@ -147,8 +235,9 @@ export default function RegisterScreen() {
       setVerificationId(id);
       setMostrarModal(true);
       setContador(30);
+
     } catch (err) {
-      console.error("❌ Erro ao enviar SMS:", err);
+      console.error("Erro ao enviar SMS:", err);
       setErro("Falha ao enviar código SMS. Verifique o número informado.");
     } finally {
       setLoading(false);
@@ -156,10 +245,11 @@ export default function RegisterScreen() {
   }
 
 
+
   // helper: fecha modal e mostra erro visual no card
   function showVisualError(message) {
-    setMostrarModal(false);         
-    setErro(message);               
+    setMostrarModal(false);
+    setErro(message);
   }
 
   // helper: apaga somente a conta recém‐criada (sem derrubar outras sessões)
@@ -172,7 +262,7 @@ export default function RegisterScreen() {
       try {
         await signOut(auth);
       } catch { }
-      console.warn("⚠️ Falha ao deletar user recém-criado; fez signOut.", delErr);
+      console.warn("Falha ao deletar user recém-criado; fez signOut.", delErr);
     }
   }
 
@@ -196,7 +286,7 @@ export default function RegisterScreen() {
       } catch (emailErr) {
         if (emailErr?.code === "auth/email-already-in-use") {
           setMostrarModal(false);
-          setErro("⚠️ Este e-mail já está em uso.");
+          setErro("Este e-mail já está em uso.");
           return;
         }
         console.error("Erro ao criar usuário por e-mail:", emailErr);
@@ -216,7 +306,7 @@ export default function RegisterScreen() {
         } else if (linkErr?.code === "auth/credential-already-in-use") {
           try { await newUser.user.delete(); } catch { await signOut(auth); }
           setMostrarModal(false);
-          setErro("⚠️ Este telefone já está vinculado a outra conta.");
+          setErro("Este telefone já está vinculado a outra conta.");
           return;
         } else if (linkErr?.code === "auth/invalid-verification-code") {
           try { await newUser.user.delete(); } catch { await signOut(auth); }
@@ -235,24 +325,15 @@ export default function RegisterScreen() {
       try {
         const criarUsuario = httpsCallable(functions, "usuarios-criarUsuario");
 
-        // Garante formato YYYY-MM-DD
-        let dataFormatada = null;
-        if (dataNascimento && dataNascimento.includes("/")) {
-          const [dia, mes, ano] = dataNascimento.split("/");
-          dataFormatada = `${ano}-${mes}-${dia}`;
-        } else {
-          dataFormatada = dataNascimento || null;
-        }
-
         await criarUsuario({
           nome,
           telefone,
           cpf,
-          dataNascimento: dataFormatada,
+          dataNascimento: dataNascimentoFormatada,
           sexoBiologico,
         });
 
-        console.log("✅ Documento criado no Firestore com sucesso!");
+        console.log("Documento criado no Firestore com sucesso!");
       } catch (firestoreErr) {
         console.error("Erro ao criar documento no Firestore:", firestoreErr);
         try { await newUser.user.delete(); } catch { await signOut(auth); }
@@ -272,7 +353,7 @@ export default function RegisterScreen() {
       setMostrarModal(false);
       setMostrarSucesso(true);
     } catch (err) {
-      console.error("❌ Erro geral na verificação:", err);
+      console.error("Erro geral na verificação:", err);
       if (newUser?.user) {
         try { await newUser.user.delete(); } catch { await signOut(auth); }
       }
@@ -366,7 +447,7 @@ export default function RegisterScreen() {
             />
           </div>
 
-          {/* Data de Nascimento sem o botão nativo de calendário (BUGA NO iOS)*/}
+          {/* Data de Nascimento */}
           <div>
             <label className="block text-sm text-slate-700 mb-1">
               Data de Nascimento
@@ -381,40 +462,40 @@ export default function RegisterScreen() {
             />
           </div>
 
-{/* Sexo Biológico */}
-<div className="relative">
-  <label className="block text-sm text-slate-700 mb-1">
-    Sexo Biológico
-  </label>
+          {/* Sexo Biológico */}
+          <div className="relative">
+            <label className="block text-sm text-slate-700 mb-1">
+              Sexo Biológico
+            </label>
 
-  <select
-    value={sexoBiologico}
-    onChange={(e) => setSexoBiologico(e.target.value)}
-    required
-    className="appearance-none w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent pr-8"
-  >
-    <option value="">Selecione</option>
-    <option value="Masculino">Masculino</option>
-    <option value="Feminino">Feminino</option>
-    <option value="Prefiro não dizer">Prefiro não dizer</option>
-  </select>
+            <select
+              value={sexoBiologico}
+              onChange={(e) => setSexoBiologico(e.target.value)}
+              required
+              className="appearance-none w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent pr-8"
+            >
+              <option value="">Selecione</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Feminino">Feminino</option>
+              <option value="Prefiro não dizer">Prefiro não dizer</option>
+            </select>
 
-  {/* Ícone de seta customizado */}
-  <svg
-    className="absolute right-3 top-[35px] w-4 h-4 text-gray-500 pointer-events-none"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 9l-7 7-7-7"
-    />
-  </svg>
-</div>
+            {/* Ícone de seta customizado */}
+            <svg
+              className="absolute right-3 top-[35px] w-4 h-4 text-gray-500 pointer-events-none"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
 
 
 
