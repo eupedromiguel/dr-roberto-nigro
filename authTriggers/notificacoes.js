@@ -13,7 +13,7 @@ const EMAIL_PASS = functions.config().email?.pass;
 
 if (!EMAIL_USER || !EMAIL_PASS) {
   console.warn(
-    "⚠️ Configurações de e-mail ausentes. Use: firebase functions:config:set email.user '...' email.pass '...'"
+    "Configurações de e-mail ausentes. Use: firebase functions:config:set email.user '...' email.pass '...'"
   );
 }
 
@@ -110,8 +110,8 @@ exports.sendVerificationEmail = async (user) => {
       },
     });
 
-    console.log(`📨 E-mail de verificação enviado para ${user.email}`);
+    console.log(`E-mail de verificação enviado para ${user.email}`);
   } catch (error) {
-    console.error("❌ Erro ao enviar e-mail de verificação:", error);
+    console.error("Erro ao enviar e-mail de verificação:", error);
   }
 };

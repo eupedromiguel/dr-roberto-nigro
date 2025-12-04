@@ -241,7 +241,7 @@ export default function LoginScreen() {
       <AuthCard
         title="Entrar"
         footer={
-          <div className="flex items-center justify-between text-sm text-gray-400 w-full">
+          <div className="flex items-center justify-between text-xs text-gray-400 w-full">
 
             {/* Lado esquerdo */}
             <div>
@@ -264,7 +264,7 @@ export default function LoginScreen() {
                 setEmailReset(email);
                 setModalResetOpen(true);
               }}
-              className="text-sm font-normal hover:text-yellow-500 hover:underline"
+              className="text-xs font-normal hover:text-yellow-500 hover:underline"
             >
               Esqueci minha senha
             </button>

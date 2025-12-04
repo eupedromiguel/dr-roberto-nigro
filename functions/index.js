@@ -28,6 +28,7 @@ exports.usuarios  = usuarios;
 exports.consultas = consultas;
 exports.medicos   = medicos;
 exports.admin     = adminMod;
+exports.notificacoes = notificacoes;
 exports.logAppointmentStatus = relatorios.logAppointmentStatus;
 
 // Função de saúde mínima para validar carregamento

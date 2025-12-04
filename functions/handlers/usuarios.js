@@ -8,7 +8,7 @@ const { admin, db } = require("./firebaseAdmin");
 exports.validarDuplicatas = onCall(async (request) => {
   const { email, telefone, cpf } = request.data || {};
 
-  console.log("📥 Solicitada validação de duplicatas:", request.data);
+  console.log("Solicitada validação de duplicatas:", request.data);
 
   if (!email && !telefone && !cpf) {
     throw new HttpsError("invalid-argument", "Campos obrigatórios ausentes.");
@@ -19,7 +19,7 @@ exports.validarDuplicatas = onCall(async (request) => {
     if (email) {
       try {
         await admin.auth().getUserByEmail(email);
-        console.warn("⚠️ E-mail já cadastrado:", email);
+        console.warn("E-mail já cadastrado:", email);
         throw new HttpsError("already-exists", "E-mail já cadastrado.");
       } catch (err) {
         if (err.code !== "auth/user-not-found") {
@@ -32,7 +32,7 @@ exports.validarDuplicatas = onCall(async (request) => {
     if (telefone) {
       const telSnap = await db.collection("usuarios").where("telefone", "==", telefone).get();
       if (!telSnap.empty) {
-        console.warn("⚠️ Telefone já cadastrado:", telefone);
+        console.warn("Telefone já cadastrado:", telefone);
         throw new HttpsError("already-exists", "Telefone já cadastrado.");
       }
     }
@@ -41,20 +41,20 @@ exports.validarDuplicatas = onCall(async (request) => {
     if (cpf) {
       const cpfSnap = await db.collection("usuarios").where("cpf", "==", cpf).get();
       if (!cpfSnap.empty) {
-        console.warn("⚠️ CPF já cadastrado:", cpf);
+        console.warn("CPF já cadastrado:", cpf);
         throw new HttpsError("already-exists", "CPF já cadastrado.");
       }
     }
 
-    console.log("✅ Nenhuma duplicidade encontrada.");
+    console.log("Nenhuma duplicidade encontrada.");
     return { valid: true };
   } catch (error) {
     if (error instanceof HttpsError) {
-      console.error("🚫 Erro de validação:", error.message);
+      console.error("Erro de validação:", error.message);
       throw error;
     }
 
-    console.error("❌ Erro interno na verificação de duplicatas:", error);
+    console.error("Erro interno na verificação de duplicatas:", error);
     throw new HttpsError("internal", "Erro ao verificar duplicatas.");
   }
 });
@@ -73,7 +73,7 @@ exports.criarUsuario = onCall(async (request) => {
 
 
   // LOG — o que chegou do front
-  console.log("📥 Dados recebidos do front:", request.data);
+  console.log("Dados recebidos do front:", request.data);
 
   if (rest && typeof rest.role !== "undefined") {
     throw new HttpsError(
@@ -95,7 +95,7 @@ exports.criarUsuario = onCall(async (request) => {
       if (!telSnap.empty) {
         const duplicado = telSnap.docs.some((doc) => doc.id !== uid);
         if (duplicado) {
-          console.warn("⚠️ Telefone já cadastrado:", telefone);
+          console.warn("Telefone já cadastrado:", telefone);
           throw new HttpsError("already-exists", "Telefone já cadastrado.");
         }
       }
@@ -107,7 +107,7 @@ exports.criarUsuario = onCall(async (request) => {
       if (!cpfSnap.empty) {
         const duplicado = cpfSnap.docs.some((doc) => doc.id !== uid);
         if (duplicado) {
-          console.warn("⚠️ CPF já cadastrado:", cpf);
+          console.warn("CPF já cadastrado:", cpf);
           throw new HttpsError("already-exists", "CPF já cadastrado.");
         }
       }
@@ -145,11 +145,11 @@ exports.criarUsuario = onCall(async (request) => {
     }
 
     // LOG — o que será salvo no Firestore
-    console.log("📝 Gravando no Firestore:", dados);
+    console.log("Gravando no Firestore:", dados);
 
     await ref.set(dados, { merge: true });
 
-    console.log("✅ Usuário salvo com sucesso:", uid);
+    console.log("Usuário salvo com sucesso:", uid);
 
     return {
       sucesso: true,
@@ -158,11 +158,11 @@ exports.criarUsuario = onCall(async (request) => {
     };
   } catch (error) {
     if (error instanceof HttpsError) {
-      console.error("🚫 Erro de validação:", error.message);
+      console.error("Erro de validação:", error.message);
       throw error;
     }
 
-    console.error("❌ Erro ao criar usuário:", error);
+    console.error("Erro ao criar usuário:", error);
     throw new HttpsError("internal", "Erro ao criar usuário.");
   }
 });
@@ -237,7 +237,7 @@ exports.atualizarUsuario = onCall(async (request) => {
   }
 
   try {
-    console.log("🧩 Atualizando usuário:", uid, updates);
+    console.log("Atualizando usuário:", uid, updates);
     await db.collection("usuarios").doc(uid).set(updates, { merge: true });
     return { sucesso: true, mensagem: "Dados atualizados com sucesso." };
   } catch (error) {
@@ -267,13 +267,13 @@ exports.deletarUsuario = onCall(async (request) => {
 
     if (snap.exists) {
       await ref.delete();
-      console.log(`🗑️ Documento Firestore deletado: ${uid}`);
+      console.log(`Documento Firestore deletado: ${uid}`);
     } else {
-      console.warn(`⚠️ Documento não encontrado no Firestore: ${uid}`);
+      console.warn(`Documento não encontrado no Firestore: ${uid}`);
     }
 
     await admin.auth().deleteUser(uid);
-    console.log(`✅ Usuário ${uid} removido do Authentication.`);
+    console.log(`Usuário ${uid} removido do Authentication.`);
 
     const logRef = db.collection("logs_delecoes").doc();
     await logRef.set({
@@ -285,14 +285,14 @@ exports.deletarUsuario = onCall(async (request) => {
       mensagem: "Conta excluída (Firestore + Auth).",
     });
 
-    console.log(`🧾 Log de auditoria criado: ${logRef.id}`);
+    console.log(`Log de auditoria criado: ${logRef.id}`);
 
     return {
       sucesso: true,
       mensagem: "Conta e dados excluídos com sucesso.",
     };
   } catch (error) {
-    console.error("❌ Erro ao excluir usuário:", error);
+    console.error("Erro ao excluir usuário:", error);
     throw new HttpsError("internal", "Erro ao excluir completamente a conta.");
   }
 });

@@ -11,7 +11,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
-import { Eye, EyeOff, Loader2, User, UserRound, Mail, Phone, CreditCard, Calendar, CheckCircle, AlertCircle, Edit, Trash2, Lock, PhoneForwarded, LogOut } from "lucide-react";
+import { Eye, EyeOff, Loader2, User, UserRound, Mail, Phone, CreditCard, Calendar, CheckCircle, AlertCircle, Edit, Lock, PhoneForwarded, NotebookPen } from "lucide-react";
 import { IMaskInput } from "react-imask";
 
 export default function PerfilScreen() {
@@ -218,72 +218,78 @@ export default function PerfilScreen() {
 
   }
 
-  async function handleAtualizarEmail() {
-    try {
-      setErro("");
-      setMensagem("");
-      setErroModal("");
-      setMensagemModal("");
-      setSalvando(true);
+async function handleAtualizarEmail() {
+  try {
+    setErro("");
+    setMensagem("");
+    setErroModal("");
+    setMensagemModal("");
+    setSalvando(true);
 
-      if (!novoEmail.trim()) {
-        setErroModal("Informe um novo e-mail.");
-        setSalvando(false);
-        return;
-      }
+    if (!novoEmail.trim()) {
+      setErroModal("Informe o novo e-mail.");
+      return;
+    }
 
+    if (!senha.trim()) {
+      setErroModal("Digite sua senha para confirmar a alteração.");
+      return;
+    }
 
-      const currentAuth = auth;
-      const currentUser = currentAuth.currentUser;
+    const currentUser = auth.currentUser;
 
+    if (!currentUser?.email) {
+      setErroModal("Sessão inválida. Faça login novamente.");
+      return;
+    }
 
-      if (!senha.trim()) {
-        setErroModal("Digite sua senha para confirmar a alteração de e-mail.");
-        setSalvando(false);
-        return;
-      }
+    // 1. Reautenticar usuário
+    const cred = EmailAuthProvider.credential(currentUser.email, senha);
 
+    await reauthenticateWithCredential(currentUser, cred).catch(() => {
+      throw new Error("Senha incorreta.");
+    });
 
-      // Reautentica o usuário
-      const cred = EmailAuthProvider.credential(currentUser.email, senha);
-      await reauthenticateWithCredential(currentUser, cred);
+    // 2. Chamar Cloud Function segura
+    const solicitarTroca = httpsCallable(functions, "usuarios-solicitarTrocaEmail");
 
-      // Atualiza o e-mail imediatamente
-      await updateEmail(currentUser, novoEmail);
-      await sendEmailVerification(currentUser);
+    const res = await solicitarTroca({
+      novoEmail: novoEmail.trim(),
+    });
 
-
-      // Atualiza também o Firestore (mantendo consistência)
-      const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario");
-      await atualizar({ email: novoEmail });
-
+    if (res.data?.sucesso) {
       setMensagemModal(
-        "E-mail atualizado com sucesso! Um aviso foi enviado ao e-mail antigo por segurança."
+        "Enviamos um link de confirmação para o novo e-mail. A alteração só será aplicada após a confirmação."
       );
 
-      await logout();
-
-      setModo(null);
       setNovoEmail("");
-      await carregarPerfil();
-    } catch (e) {
-      console.error("Erro ao atualizar e-mail:", e);
-      const code = e.code || "";
-      const msg = e.message || "";
-
-      if (code === "auth/email-already-in-use" || msg.includes("already-exists")) {
-        setErroModal("Este e-mail já está em uso por outro usuário.");
-      } else if (code === "auth/requires-recent-login") {
-        setErroModal("Sessão expirada. Faça login novamente para alterar o e-mail.");
-      } else if (code === "auth/invalid-email") {
-        setErroModal("E-mail inválido. Verifique o formato e tente novamente.");
-      } else {
-        setErroModal("Erro ao atualizar e-mail. " + (msg || "Tente novamente."));
-      }
-    } finally {
-      setSalvando(false);
+      setSenha("");
+      setModo(null);
+      return;
     }
+
+    setErroModal("Falha ao solicitar troca de e-mail.");
+  } catch (e) {
+    const msg = e.message || "";
+
+    if (msg.includes("Senha incorreta")) {
+      setErroModal("Senha incorreta.");
+    }
+    else if (msg.includes("email-already-in-use")) {
+      setErroModal("Este e-mail já está em uso.");
+    }
+    else if (msg.includes("invalid-email")) {
+      setErroModal("Formato de e-mail inválido.");
+    }
+    else {
+      setErroModal("Erro ao tentar atualizar e-mail.");
+    }
+
+  } finally {
+    setSalvando(false);
   }
+}
+
 
 
   async function handleExcluirConta() {
@@ -406,7 +412,7 @@ if (senha !== confirmarSenha) {
 
 
               <div className="flex items-center text-white gap-2">
-                <UserRound className="text-yellow-400" size={18} />
+                <NotebookPen className="text-yellow-400" size={18} />
                 <p><b>Nome:</b> {perfil.nome || "(sem nome)"}</p>
               </div>
 
