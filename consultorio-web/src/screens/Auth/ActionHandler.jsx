@@ -151,19 +151,37 @@ export default function ActionHandler() {
             } catch (err) {
               console.error("Erro ao confirmar troca de e-mail:", err);
 
+              const code = err.code || "";
+              const msg = err.message || "";
+
               let mensagem = "Erro ao confirmar troca de e-mail.";
 
-              if (err.message?.includes("não retornou")) {
+              if (code === "auth/expired-action-code") {
+                mensagem = "Este link expirou. Solicite uma nova troca de e-mail.";
+              }
+              else if (code === "auth/invalid-action-code") {
+                mensagem = "Este link é inválido ou já foi usado.";
+              }
+              else if (code === "auth/user-disabled") {
+                mensagem = "Esta conta está desativada.";
+              }
+              else if (code === "auth/user-not-found") {
+                mensagem = "Usuário não encontrado.";
+              }
+              else if (msg.includes("não retornou")) {
                 mensagem = "Não foi possível obter o e-mail confirmado pelo Firebase.";
-              } else if (err.message?.includes("inválido")) {
+              }
+              else if (msg.includes("inválido")) {
                 mensagem = "Firebase retornou um e-mail inválido.";
-              } else if (err.message?.toLowerCase().includes("permission")) {
-                mensagem = "Sem permissão para atualizar o banco de dados.";
+              }
+              else if (msg.toLowerCase().includes("permission")) {
+                mensagem = "Sem permissão para atualizar os dados.";
               }
 
               setStatus("error");
               setMessage(mensagem);
             }
+
             break;
 
 
