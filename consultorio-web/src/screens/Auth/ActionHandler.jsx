@@ -43,7 +43,7 @@ export default function ActionHandler() {
 
       setStatus("success");
       setMessage(
-        "E-mail restaurado com sucesso.\n\nSe você não reconhece esta ação, altere sua senha imediatamente."
+        "E-mail restaurado com sucesso. Se você não reconhece esta ação, altere sua senha imediatamente."
       );
 
       const cleanUrl = window.location.origin + "/action-complete";
