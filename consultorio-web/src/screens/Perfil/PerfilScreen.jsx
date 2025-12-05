@@ -67,15 +67,17 @@ export default function PerfilScreen() {
 
 
   useEffect(() => {
-  if (!erroModal && !mensagemModal) return;
+    if (modo === "emailSucesso") return;
+    if (!erroModal && !mensagemModal) return;
 
-  const timer = setTimeout(() => {
-    setErroModal("");
-    setMensagemModal("");
-  }, 3000);
+    const timer = setTimeout(() => {
+      setErroModal("");
+      setMensagemModal("");
+    }, 3000);
 
-  return () => clearTimeout(timer);
-}, [erroModal, mensagemModal]);
+    return () => clearTimeout(timer);
+  }, [erroModal, mensagemModal, modo]);
+
 
 
 
@@ -330,7 +332,7 @@ export default function PerfilScreen() {
 
         setNovoEmail("");
         setSenha("");
-        setModo(null);
+        setModo("emailSucesso");
         return;
       }
 
@@ -678,7 +680,8 @@ export default function PerfilScreen() {
 
 
       {/* Modal principal */}
-      {modo && modo !== "excluido" && (
+      {modo && modo !== "excluido" && modo !== "emailSucesso" && (
+
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-lg shadow-xl p-6 w-80 relative">
             <h3 className="flex justify-center text-lg font-semibold mb-3 text-gray-900">
@@ -962,6 +965,48 @@ export default function PerfilScreen() {
           </div>
         </div>
       )}
+
+      {modo === "emailSucesso" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-96 text-center">
+
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-100 text-green-600 rounded-full p-4">
+                <CheckCircle size={36} />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Link enviado!
+            </h3>
+
+            <p className="text-gray-600 mb-6">
+              Link enviado para o novo e-mail.<br />
+              A troca só será feita após confirmação nesse link.
+            </p>
+
+            <Button
+              onClick={() => {
+                setModo(null);
+                setErroModal("");
+                setMensagemModal("");
+              }}
+              className="bg-gray-900 hover:bg-gray-800 text-white w-full py-2 rounded-md"
+            >
+              Ok
+            </Button>
+
+            <button
+              onClick={() => setModo(null)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ✕
+            </button>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
