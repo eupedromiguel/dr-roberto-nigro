@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from "react";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../../services/firebase";
 import {
-  getAuth,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  updateEmail,
   sendEmailVerification,
+  PhoneAuthProvider,
+  updatePhoneNumber,
+  RecaptchaVerifier
 } from "firebase/auth";
 import { useAuth } from "../../context/AuthContext";
 import { Link } from "react-router-dom";
@@ -32,10 +33,10 @@ export default function PerfilScreen() {
   const [mensagemModal, setMensagemModal] = useState("");
   const [emailVerificado, setEmailVerificado] = useState(false);
   const [reenviandoEmail, setReenviandoEmail] = useState(false);
-
-
-
-
+  const [novoTelefone, setNovoTelefone] = useState("")
+  const [codigoSMS, setCodigoSMS] = useState("")
+  const [verificationId, setVerificationId] = useState("")
+  const [stepTelefone, setStepTelefone] = useState("telefone")
   const [formData, setFormData] = useState({
     nome: "",
     telefone: "",
@@ -43,6 +44,9 @@ export default function PerfilScreen() {
     dataNascimento: "",
     sexoBiologico: "",
   });
+
+
+
 
   // Carregar perfil (reutilizável)
   const carregarPerfil = useCallback(async () => {
@@ -64,6 +68,9 @@ export default function PerfilScreen() {
       setCarregandoPerfil(false);
     }
   }, []);
+
+
+
 
 
   useEffect(() => {
@@ -140,6 +147,7 @@ export default function PerfilScreen() {
     return `${yyyy}-${mm}-${dd}`;
   }
 
+
   function validarDataNascimento(dataStr) {
 
     if (!dataStr) {
@@ -193,7 +201,241 @@ export default function PerfilScreen() {
 
 
 
+
+  function formatarTelefone(telefone) {
+
+    if (!telefone) {
+      return ""
+    }
+
+    const numeros = telefone.replace(/\D/g, "")
+
+    if (numeros.length !== 11) {
+      throw new Error("telefone-invalido")
+    }
+
+    return `+55${numeros}`
+
+  }
+
+  function telefoneSomenteNumeros(telefone) {
+    return telefone.replace(/\D/g, "")
+  }
+
+
+
+
+
   // Ações
+
+
+
+async function handleEnviarCodigoTelefone() {
+
+  try {
+
+    setErroModal("")
+    setMensagemModal("")
+    setSalvando(true)
+
+    if (!senha.trim()) {
+      setErroModal("Digite sua senha para confirmar.")
+      return
+    }
+
+    if (!novoTelefone.trim()) {
+      setErroModal("Informe o novo telefone.")
+      return
+    }
+
+    const currentUser = auth.currentUser
+
+    if (!currentUser?.email) {
+      setErroModal("Sessão inválida. Faça login novamente.")
+      return
+    }
+
+    // Reautentica
+    const cred = EmailAuthProvider.credential(
+      currentUser.email,
+      senha
+    )
+
+    await reauthenticateWithCredential(currentUser, cred)
+
+    const provider = new PhoneAuthProvider(auth)
+
+    const telefoneLimpo = telefoneSomenteNumeros(novoTelefone)
+    const telefoneFormatado = `+55${telefoneLimpo}`
+
+    const recaptcha = await initRecaptchaTelefone()
+
+    const id = await provider.verifyPhoneNumber(
+      telefoneFormatado,
+      recaptcha
+    )
+
+    setVerificationId(id)
+    setStepTelefone("codigo")
+
+  } catch (error) {
+
+    console.error("Erro real:", error)
+
+    // Telefone inválido (throw manual)
+    if (error.message === "telefone-invalido") {
+      setErroModal("Digite um telefone válido com DDD e 9 dígitos.")
+      return
+    }
+
+    // Senha incorreta / reauth falhou
+    if (
+      error.code === "auth/wrong-password" ||
+      error.code === "auth/invalid-credential"
+    ) {
+      setErroModal("Senha incorreta.")
+      setSenha("")
+      return
+    }
+
+    // Sessão antiga
+    if (error.code === "auth/requires-recent-login") {
+      setErroModal("Sessão expirada. Faça login novamente.")
+      return
+    }
+
+    // CAPTCHA falhou
+    if (error.code === "auth/captcha-check-failed") {
+      setErroModal("Falha de validação automática. Tente novamente.")
+      return
+    }
+
+    // Fallback seguro
+    setErroModal("Erro ao enviar SMS. Tente novamente.")
+
+  } finally {
+    setSalvando(false)
+  }
+}
+
+
+
+
+
+  async function initRecaptchaTelefone() {
+    try {
+      if (window.recaptchaVerifier) {
+        try {
+          window.recaptchaVerifier.clear()
+        } catch { }
+        window.recaptchaVerifier = null
+      }
+
+      const verifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        {
+          size: "invisible",
+          callback: () => console.log("reCAPTCHA verificado (telefone)"),
+          "expired-callback": () => {
+            console.warn("reCAPTCHA expirado, tente novamente")
+          },
+        }
+      )
+
+      await verifier.render()
+      window.recaptchaVerifier = verifier
+
+      return verifier
+
+    } catch (err) {
+      console.error("Erro ao inicializar reCAPTCHA:", err)
+      throw err
+    }
+  }
+
+
+
+
+
+  async function handleConfirmarTelefone() {
+    try {
+      setErroModal("")
+      setMensagemModal("")
+      setSalvando(true)
+
+      if (!codigoSMS.trim()) {
+        setErroModal("Digite o código recebido por SMS.")
+        setSalvando(false)
+        return
+      }
+
+      const currentUser = auth.currentUser
+
+      if (!currentUser) {
+        setErroModal("Sessão expirada. Faça login novamente.")
+        setSalvando(false)
+        return
+      }
+
+      if (!verificationId) {
+        setErroModal("Código inválido ou expirado. Solicite novamente.")
+        setSalvando(false)
+        return
+      }
+
+      // Cria a credencial com o código
+      const credential = PhoneAuthProvider.credential(
+        verificationId,
+        codigoSMS
+      )
+
+      // Atualiza telefone no Firebase Auth
+      await updatePhoneNumber(currentUser, credential)
+
+      // Atualiza telefone no Firestore
+      const atualizar = httpsCallable(functions, "usuarios-atualizarUsuario")
+
+      await atualizar({
+        telefone: novoTelefone
+      })
+
+      setModo("telefoneSucesso")
+
+      setNovoTelefone("")
+      setCodigoSMS("")
+      setSenha("")
+      setStepTelefone("telefone")
+
+      await carregarPerfil()
+
+    } catch (error) {
+      console.error(error)
+
+      let mensagem = "Erro ao confirmar telefone."
+
+      if (error.code === "auth/invalid-verification-code") {
+        mensagem = "Código inválido."
+      }
+
+      if (error.code === "auth/code-expired") {
+        mensagem = "Código expirado. Solicite novamente."
+      }
+
+      if (error.code === "auth/requires-recent-login") {
+        mensagem = "Sua sessão expirou. Faça login novamente."
+      }
+
+      setErroModal(mensagem)
+
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+
+
+
 
   async function handleAtualizar() {
     try {
@@ -407,7 +649,7 @@ export default function PerfilScreen() {
 
 
 
-      const auth = getAuth();
+
       const currentUser = auth.currentUser;
       if (!currentUser?.email) {
         setErroModal("Usuário inválido ou não autenticado.");
@@ -635,11 +877,26 @@ export default function PerfilScreen() {
         <Button
           className="bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
           onClick={() => {
+
+
+
+            setErro("")
+            setMensagem("")
+            setErroModal("")
+            setMensagemModal("")
+            setNovoTelefone("")
+            setCodigoSMS("")
+            setSenha("")
+            setStepTelefone("telefone")
+            setModo("telefone")
+
           }}
+
         >
           <PhoneForwarded size={14} />
           Mudar telefone
         </Button>
+
 
         <Button
           className="bg-gray-800 hover:bg-gray-900 text-white flex items-center justify-center gap-1 px-3 py-1.5 rounded text-xs"
@@ -688,6 +945,7 @@ export default function PerfilScreen() {
               {modo === "atualizar" && "Atualizar Dados"}
               {modo === "email" && "Atualizar e-mail"}
               {modo === "excluir" && "Excluir Conta"}
+              {modo === "telefone" && "Mudar telefone"}
             </h3>
 
             {erroModal && (
@@ -852,6 +1110,106 @@ export default function PerfilScreen() {
               </div>
             )}
 
+
+
+            {/* Atualizar telefone */}
+            {modo === "telefone" && (
+
+              <form autoComplete="off" className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+
+                {/* Campos “iscas” invisíveis para desativar autofill */}
+                <input type="email" name="fake-email" autoComplete="username" style={{ display: "none" }} />
+                <input type="password" name="fake-password" autoComplete="current-password" style={{ display: "none" }} />
+
+                {stepTelefone === "telefone" && (
+                  <>
+                    <label className="block text-sm text-gray-700">
+                      Novo telefone:
+                    </label>
+
+                    <IMaskInput
+                      mask="(00) 00000-0000"
+                      placeholder="(11) 91234-5678"
+                      value={novoTelefone || ""}
+                      onAccept={(value) => setNovoTelefone(value)}
+                      className="w-full border border-gray-500 rounded px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      inputMode="tel"
+                    />
+
+                    <label className="block text-sm text-gray-700">
+                      Digite sua senha:
+                    </label>
+
+                    <div className="relative">
+                      <input
+                        type={mostrarSenha ? "text" : "password"}
+                        name="senha-telefone"
+                        autoComplete="new-password"
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                        className="w-full border border-gray-500 rounded px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                        placeholder="Senha atual"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setMostrarSenha((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+
+
+                    <Button
+                      onClick={handleEnviarCodigoTelefone}
+                      disabled={salvando}
+                      className="bg-red-600 hover:bg-red-700 text-white w-full mt-2"
+                    >
+                      {salvando ? "Enviando SMS..." : "Enviar código"}
+                    </Button>
+                  </>
+                )}
+
+                {stepTelefone === "codigo" && (
+                  <>
+                    <label className="block text-sm text-gray-700">
+                      Código recebido por SMS:
+                    </label>
+
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Digite o código de 6 dígitos"
+                      value={codigoSMS}
+                      maxLength={6}
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
+                      className="w-full border border-gray-500 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                      onChange={(e) => {
+                        const onlyNumbers = e.target.value.replace(/\D/g, "");
+                        const limited = onlyNumbers.slice(0, 6);
+                        setCodigoSMS(limited);
+                      }}
+                    />
+
+                    <Button
+                      onClick={handleConfirmarTelefone}
+                      disabled={salvando}
+                      className="bg-green-600 hover:bg-green-700 text-white w-full mt-2"
+                    >
+                      {salvando ? "Confirmando..." : "Confirmar telefone"}
+                    </Button>
+                  </>
+                )}
+
+              </form>
+
+            )}
+
+
+
+
             {/* Excluir conta */}
             {modo === "excluir" && (
               <div className="space-y-2">
@@ -906,17 +1264,25 @@ export default function PerfilScreen() {
             {/* Fechar modal */}
             <button
               onClick={() => {
-                setErro("");
-                setMensagem("");
-                setErroModal("");
-                setMensagemModal("");
-                setSenha("");
-                setConfirmarSenha("");
-                setNovoEmail("");
-                setMostrarSenha(false);
-                setMostrarSenhaConfirmar(false);
-                setModo(null);
+
+                if (window.recaptchaVerifier) {
+                  window.recaptchaVerifier.clear()
+                  delete window.recaptchaVerifier
+                }
+
+                setErro("")
+                setMensagem("")
+                setErroModal("")
+                setMensagemModal("")
+                setSenha("")
+                setConfirmarSenha("")
+                setNovoEmail("")
+                setMostrarSenha(false)
+                setMostrarSenhaConfirmar(false)
+                setModo(null)
+
               }}
+
               className="absolute top-2 right-3 text-gray-500 hover:text-gray-800 text-sm"
             >
               ✕
@@ -1006,6 +1372,52 @@ export default function PerfilScreen() {
           </div>
         </div>
       )}
+
+      {modo === "telefoneSucesso" && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-96 text-center">
+
+            <div className="flex justify-center mb-4">
+              <div className="bg-green-100 text-green-600 rounded-full p-4">
+                <CheckCircle size={36} />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Telefone atualizado!
+            </h3>
+
+            <p className="text-gray-600 mb-6">
+              Seu número foi alterado com sucesso.
+            </p>
+
+            <Button
+              onClick={() => {
+                setModo(null)
+                setErroModal("")
+                setMensagemModal("")
+              }}
+              className="bg-gray-900 hover:bg-gray-800 text-white w-full py-2 rounded-md"
+            >
+              Ok
+            </Button>
+
+            <button
+              onClick={() => setModo(null)}
+              className="absolute top-2 right-3 text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ✕
+            </button>
+
+          </div>
+        </div>
+      )}
+
+
+
+      <div id="recaptcha-container"></div>
+
+
 
     </div>
   );

@@ -10,6 +10,9 @@ import {
 import { auth } from "../../services/firebase";
 import Button from "../../components/Button";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { Eye, EyeOff } from "lucide-react";
+import Spinner from "../../components/Spinner"
+
 
 // -------------------------------------------------------------
 //   Essa página gerencia as ações vindas de links do Firebase:
@@ -28,34 +31,140 @@ export default function ActionHandler() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+
   const isPasswordReset = mode === "resetPassword";
+  const isRecoverEmail = mode === "recoverEmail";
+
 
   const functions = getFunctions(undefined, "southamerica-east1");
 
 
 
 
-  async function confirmarRecoverEmail() {
+  async function handlePasswordConfirm() {
+    setPasswordError("");
+
+    if (!newPassword || !confirmPassword) {
+      setPasswordError("Preencha ambos os campos.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+
     try {
       setStatus("loading");
 
-      await applyActionCode(auth, actionCode);
+      // Confirma redefinição de senha no Firebase
+      await confirmPasswordReset(auth, actionCode, newPassword);
 
       setStatus("success");
-      setMessage(
-        "E-mail restaurado com sucesso. Se você não reconhece esta ação, altere sua senha imediatamente."
-      );
-
-      const cleanUrl = window.location.origin + "/action-complete";
-      window.history.replaceState({}, document.title, cleanUrl);
+      setMessage("Senha alterada com sucesso!");
+      setNewPassword("");
+      setConfirmPassword("");
 
     } catch (err) {
-      console.error("Erro ao recuperar e-mail:", err);
+      console.error("Erro ao redefinir senha:", err);
 
-      setStatus("error");
-      setMessage("Este link já foi usado ou expirou.");
+      let mensagem = "Erro ao redefinir senha.";
+
+      if (err.code === "auth/expired-action-code") {
+        mensagem = "Este link expirou. Solicite nova redefinição.";
+      }
+      else if (err.code === "auth/invalid-action-code") {
+        mensagem = "Link inválido ou já usado.";
+      }
+      else if (err.code === "auth/weak-password") {
+        mensagem = "Senha fraca. Use pelo menos 6 caracteres.";
+      }
+
+      setStatus("askPassword");
+      setPasswordError(mensagem);
     }
   }
+
+
+  // =====================================================
+  // Recuperação de e-mail
+  // =====================================================
+
+
+  async function confirmarRecoverEmail() {
+  try {
+    setStatus("loading");
+
+    console.log("ActionCode recebido:", actionCode);
+
+    // 1. Valida o código (não aplica ainda)
+    const info = await checkActionCode(auth, actionCode);
+
+    console.log("Info do checkActionCode (frontend):", info);
+    console.log("info.data:", info.data);
+
+    const emailRestaurado = info.data?.email;
+    const uid = info.data?.uid;
+
+    console.log("Dados extraídos:", { emailRestaurado, uid });
+
+    // Não precisa do uid no frontend, o backend vai obter
+    if (!emailRestaurado) {
+      throw new Error("E-mail não encontrado no link de recuperação.");
+    }
+
+    // 2. Aplica a reversão no Auth PRIMEIRO (no frontend)
+    console.log("Aplicando reversão no Auth...");
+    await applyActionCode(auth, actionCode);
+    console.log("Reversão aplicada com sucesso!");
+
+    // 3. Agora envia para o backend sincronizar o Firestore
+    console.log("Sincronizando com Firestore...");
+    const sincronizarRecover = httpsCallable(
+      functions, 
+      "usuarios-usuariosSyncRecoverEmail"
+    );
+
+    await sincronizarRecover({
+      email: emailRestaurado  // Envia apenas o email restaurado
+    });
+
+    console.log("Sincronização concluída!");
+
+    // 4. Feedback
+    setStatus("success");
+    setMessage("E-mail restaurado e sincronizado com sucesso.");
+
+    // 5. Limpa URL
+    const cleanUrl = window.location.origin + "/action-complete";
+    window.history.replaceState({}, document.title, cleanUrl);
+
+  } catch (err) {
+    console.error("Erro ao restaurar e-mail:", err);
+    setStatus("error");
+    
+    // Mensagens mais específicas
+    if (err.code === "auth/invalid-action-code") {
+      setMessage("Link inválido ou já utilizado.");
+    } else if (err.code === "auth/expired-action-code") {
+      setMessage("Link expirado. Solicite um novo.");
+    } else {
+      setMessage(err.message || "Erro ao restaurar o e-mail.");
+    }
+  }
+}
+
+
+
+
 
 
   // UseEffects  
@@ -119,14 +228,27 @@ export default function ActionHandler() {
           // Redefinição de senha
           // =====================================================
           case "resetPassword": {
-            const emailFromCode = await verifyPasswordResetCode(
-              auth,
-              actionCode
-            );
-            setEmail(emailFromCode);
-            setStatus("askPassword");
+            try {
+              const emailFromCode = await verifyPasswordResetCode(auth, actionCode);
+
+              setEmail(emailFromCode);
+              setStatus("askPassword");
+            } catch (err) {
+
+              console.error("Código de redefinição inválido:", err);
+
+              let mensagem = "Link inválido ou expirado.";
+
+              if (err.code === "auth/expired-action-code") {
+                mensagem = "Este link expirou. Solicite nova redefinição.";
+              }
+
+              setStatus("error");
+              setMessage(mensagem);
+            }
             break;
           }
+
 
           // =====================================================
           // Mudar email
@@ -250,26 +372,48 @@ export default function ActionHandler() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-gray-900">
       <div className="max-w-md w-full bg-white shadow-xl rounded-2xl p-8">
-        {status === "loading" && <p>Carregando...</p>}
+        {status === "loading" && (
+          <Spinner text="Sincronizando tudo... Aguarde alguns segundos." />
+        )}
+
 
         {status === "success" && (
           <>
             <p className="text-lg font-semibold mb-4">{message}</p>
 
-            {isPasswordReset && (
+            {/* Voltar para login após RECUPERAR E-MAIL */}
+            {isRecoverEmail && (
               <a href="/login">
-                <Button className="mt-4 w-full">Ir para login</Button>
+                <Button className="mt-4 w-full">
+                  Voltar para o login
+                </Button>
               </a>
             )}
 
-            {!isPasswordReset && continueUrl && (
+            {/* Voltar para login após RESET de senha */}
+            {isPasswordReset && !isRecoverEmail && (
               <a href="/login">
-                <Button className="mt-4 w-full">Voltar ao aplicativo</Button>
+                <Button className="mt-4 w-full">
+                  Ir para login
+                </Button>
+              </a>
+            )}
+
+            {/* Voltar ao app normal */}
+            {!isPasswordReset && !isRecoverEmail && continueUrl && (
+              <a href="/login">
+                <Button className="mt-4 w-full">
+                  Voltar ao aplicativo
+                </Button>
               </a>
             )}
           </>
         )}
 
+
+
+
+        {/* Recuperar senha */}
         {status === "askPassword" && (
           <>
             <h2 className="text-xl font-semibold mb-2">Redefinir senha</h2>
@@ -278,22 +422,60 @@ export default function ActionHandler() {
             </p>
 
             <div className="space-y-3 mb-2">
-              <input
-                type="password"
-                placeholder="Nova senha"
-                className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
 
-              <input
-                type="password"
-                placeholder="Confirme a nova senha"
-                className="border border-gray-300 rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              {/* Nova senha */}
+              <div className="relative">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Nova senha"
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full pr-10
+                 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  value={newPassword}
+                  onChange={(e) => {
+                    setNewPassword(e.target.value);
+                    setPasswordError("");
+                  }}
+
+                  autoComplete="new-password"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+
+              {/* Confirmar nova senha */}
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirme a nova senha"
+                  className="border border-gray-300 rounded-lg px-3 py-2 w-full pr-10
+                 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordError("");
+                  }}
+
+                  autoComplete="new-password"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
             </div>
+
 
             {passwordError && (
               <p className="text-red-600 text-sm mb-3">{passwordError}</p>
@@ -304,6 +486,8 @@ export default function ActionHandler() {
             </Button>
           </>
         )}
+
+
 
         {status === "confirmRecover" && (
           <>

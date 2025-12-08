@@ -334,3 +334,78 @@ exports.deletarUsuario = onCall(async (request) => {
     throw new HttpsError("internal", "Erro ao excluir completamente a conta.");
   }
 });
+
+
+
+// =====================================================
+// SINCRONIZAR E-MAIL APÓS RECUPERAÇÃO
+// =====================================================
+
+exports.usuariosSyncRecoverEmail = onCall(async (request) => {
+  const { email } = request.data;
+
+  // Validação
+  if (!email) {
+    throw new HttpsError(
+      "invalid-argument", 
+      "E-mail não informado."
+    );
+  }
+
+  console.log("Iniciando sincronização de recuperação para:", email);
+
+  try {
+    // 1. Busca o usuário pelo email no Auth
+    let userAuth;
+    try {
+      userAuth = await admin.auth().getUserByEmail(email);
+    } catch (error) {
+      console.error("Usuário não encontrado no Auth:", error);
+      throw new HttpsError(
+        "not-found",
+        "Usuário não encontrado no Authentication."
+      );
+    }
+
+    const uid = userAuth.uid;
+    console.log("Usuário encontrado:", { uid, email: userAuth.email });
+
+    // 2. Sincroniza Firestore com os dados do Auth
+    const docRef = admin.firestore().collection("usuarios").doc(uid);
+    
+    await docRef.set(
+      {
+        email: userAuth.email,
+        emailVerificado: userAuth.emailVerified,
+        atualizadoEm: admin.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    console.log("Campo 'emailVerificado' sincronizado no Firestore!");
+
+    return {
+      success: true,
+      uid: uid,
+      email: userAuth.email,
+      emailVerificado: userAuth.emailVerified
+    };
+
+  } catch (error) {
+    console.error("Erro ao sincronizar recuperação:", error);
+    
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    throw new HttpsError(
+      "internal",
+      "Erro ao processar recuperação de e-mail."
+    );
+  }
+});
+
+
+
+
+
