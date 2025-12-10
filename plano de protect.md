@@ -4,22 +4,7 @@ Este documento organiza, em formato de checklist e passos práticos, a configura
 
 ---
 
-## 1. Monitoramento Automático no Firebase
-
-No **Firebase Console**, ativar:
-
-- Alertas de gastos
-- Alertas de pico de requisições
-- Logs (Stackdriver / Google Cloud Logs)
-- Cloud Monitoring
-- Alerta de aumento súbito de custo
-
-### Objetivo
-Detectar uso anormal, abuso de API, consumo fora do padrão e evitar surpresas na fatura.
-
----
-
-## 2. Checklist Geral de Segurança
+## Checklist Geral de Segurança
 
 | Nível          | Ação                          |
 |----------------|-------------------------------|
@@ -37,7 +22,7 @@ Cloudflare + Rate limit + Autenticação obrigatória = proteção real.
 
 ---
 
-## 3. Criar conta na Cloudflare
+## Criar conta na Cloudflare
 
 Acesse:
 
@@ -53,7 +38,7 @@ Plano recomendado:
 
 ---
 
-## 4. Alterar DNS para Cloudflare
+## Alterar DNS para Cloudflare
 
 A Cloudflare exibirá algo como:
 
@@ -74,7 +59,7 @@ A propagação pode levar:
 
 ---
 
-## 5. Apontar o domínio para o Firebase Hosting
+## Apontar o domínio para o Firebase Hosting
 
 ### No Firebase Console
 
@@ -98,7 +83,7 @@ Crie os seguintes registros:
 
 ---
 
-## 6. Ativar proxy da Cloudflare
+## Ativar proxy da Cloudflare
 
 Na Cloudflare → DNS:
 
@@ -113,7 +98,7 @@ Cloudflare está protegendo o Firebase Hosting.
 
 ---
 
-## 7. Ativar DDoS, Firewall e Bot Protection
+## Ativar DDoS, Firewall e Bot Protection
 
 ### Cloudflare → Security → Settings
 
@@ -124,7 +109,7 @@ Ativar:
 
 ---
 
-## 8. Criar regras de firewall
+## Criar regras de firewall
 
 Acesse:
 
