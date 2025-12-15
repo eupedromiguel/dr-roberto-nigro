@@ -79,10 +79,24 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-5 py-3 flex justify-between items-center">
         <Link
           to="/"
-          className="flex items-center gap-2 font-light text-xl tracking-wide hover:opacity-50 transition"
+          className="flex items-center gap-3 group transition-all duration-300"
         >
-
-          <span>Clínica Dr. Roberto Nigro</span>
+          <div className="relative">
+            <img
+              src="https://img.icons8.com/fluency/48/caduceus.png"
+              alt="caduceus"
+              className="w-7 h-7 group-hover:rotate-12 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-yellow-400 blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-ubuntu font-medium text-lg leading-tight text-white group-hover:text-yellow-400 transition-colors duration-300">
+              Clínica Dr. Roberto Nigro
+            </span>
+            <span className="font-ubuntu text-[10px] text-gray-400 tracking-wider uppercase">
+              Excelência em Saúde
+            </span>
+          </div>
         </Link>
 
         {/* Botão Mobile */}
