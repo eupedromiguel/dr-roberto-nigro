@@ -32,11 +32,19 @@ input[type="time"] {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+    /* Fix para Safari */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   @page {
     size: A4 landscape;
     margin: 10mm 8mm;
+  }
+
+  /* Fix específico para WebKit/Safari */
+  html {
+    -webkit-print-color-adjust: exact !important;
   }
 
   body {
@@ -45,6 +53,8 @@ input[type="time"] {
     background: white !important;
     font-size: 10px !important;
     line-height: 1.2 !important;
+    /* Fix Safari: usa fontes seguras para impressão */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
   }
 
   /* Container principal */
@@ -118,6 +128,9 @@ input[type="time"] {
     margin: 4px 0 !important;
     border-collapse: collapse !important;
     page-break-inside: auto !important;
+    /* Fix Safari: força layout de tabela */
+    display: table !important;
+    table-layout: fixed !important;
   }
 
   thead {
@@ -134,16 +147,23 @@ input[type="time"] {
     border: 0.5px solid #ddd !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
+    /* Fix Safari: força renderização */
+    display: table-cell !important;
+    vertical-align: middle !important;
   }
 
   th {
     font-size: 7px !important;
     font-weight: 600 !important;
+    /* Fix Safari: fundo de cabeçalho */
+    background-color: #f3f4f6 !important;
   }
 
   tr {
     page-break-inside: avoid !important;
     page-break-after: auto !important;
+    /* Fix Safari */
+    display: table-row !important;
   }
 
   /* Gráficos */
@@ -235,6 +255,8 @@ input[type="time"] {
   .bg-emerald-50,
   .bg-slate-50 {
     background-color: #f9fafb !important;
+    /* Fix Safari */
+    -webkit-print-color-adjust: exact !important;
   }
 
   .text-green-900,
@@ -246,6 +268,17 @@ input[type="time"] {
   .text-gray-950,
   .text-gray-800 {
     color: #111827 !important;
+  }
+
+  /* Fix Safari: força cores em células de tabela */
+  table tbody tr:nth-child(even) {
+    background-color: #f9fafb !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  table tbody tr:nth-child(odd) {
+    background-color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
   }
 
   /* Bordas visíveis */

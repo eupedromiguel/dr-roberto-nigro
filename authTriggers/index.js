@@ -7,7 +7,7 @@
 
 const functions = require("firebase-functions");
 const { admin, db } = require("./firebaseAdmin");
-const { sendVerificationEmail } = require("./notificacoes");
+const { sendVerificationEmail, sendAppointmentConfirmationEmail } = require("./notificacoes");
 
 const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
@@ -107,3 +107,89 @@ exports.onUserDelete = functions.auth.user().onDelete(async (user) => {
     return null;
   }
 });
+
+
+// =========================================================
+// onAppointmentCreated
+// =========================================================
+// Dispara automaticamente quando um novo appointment é criado.
+// - Busca dados do paciente (nome, email)
+// - Busca dados do médico (nome) em usuarios
+// - Busca especialidade do médico em medicos_publicos
+// - Envia e-mail de confirmação para o paciente
+// =========================================================
+exports.onAppointmentCreated = functions.firestore
+  .document("appointments/{appointmentId}")
+  .onCreate(async (snap, context) => {
+    const appointmentData = snap.data();
+    const appointmentId = context.params.appointmentId;
+
+    try {
+      console.log(`Novo appointment criado: ${appointmentId}`);
+
+      // 1. Buscar dados do paciente
+      const pacienteId = appointmentData.pacienteId;
+      if (!pacienteId) {
+        console.error("Appointment sem pacienteId. Abortando envio de e-mail.");
+        return null;
+      }
+
+      const pacienteDoc = await db.collection("usuarios").doc(pacienteId).get();
+      if (!pacienteDoc.exists) {
+        console.error(`Paciente ${pacienteId} não encontrado no Firestore.`);
+        return null;
+      }
+
+      const pacienteData = pacienteDoc.data();
+      const pacienteInfo = {
+        nome: pacienteData.nome || "Paciente",
+        email: pacienteData.email,
+      };
+
+      if (!pacienteInfo.email) {
+        console.warn(`Paciente ${pacienteId} não possui e-mail cadastrado. Abortando envio.`);
+        return null;
+      }
+
+      // 2. Buscar dados do médico
+      const medicoId = appointmentData.medicoId;
+      if (!medicoId) {
+        console.error("Appointment sem medicoId. Abortando envio de e-mail.");
+        return null;
+      }
+
+      const medicoDoc = await db.collection("usuarios").doc(medicoId).get();
+      if (!medicoDoc.exists) {
+        console.error(`Médico ${medicoId} não encontrado em 'usuarios'.`);
+        return null;
+      }
+
+      const medicoData = medicoDoc.data();
+      const medicoInfo = {
+        nome: medicoData.nome || "Médico",
+        especialidade: null,
+      };
+
+      // 3. Buscar especialidade do médico em medicos_publicos
+      try {
+        const medicoPublicoDoc = await db.collection("medicos_publicos").doc(medicoId).get();
+        if (medicoPublicoDoc.exists) {
+          const medicoPublicoData = medicoPublicoDoc.data();
+          medicoInfo.especialidade = medicoPublicoData.especialidade || null;
+        } else {
+          console.warn(`Médico ${medicoId} não encontrado em 'medicos_publicos'. Especialidade não será exibida.`);
+        }
+      } catch (err) {
+        console.warn(`Erro ao buscar especialidade do médico ${medicoId}:`, err);
+      }
+
+      // 4. Enviar e-mail de confirmação
+      await sendAppointmentConfirmationEmail(appointmentData, pacienteInfo, medicoInfo);
+      console.log(`E-mail de confirmação enviado com sucesso para ${pacienteInfo.email}`);
+
+      return null;
+    } catch (error) {
+      console.error("Erro no gatilho onAppointmentCreated:", error);
+      return null;
+    }
+  });

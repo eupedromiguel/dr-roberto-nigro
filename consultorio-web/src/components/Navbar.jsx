@@ -85,9 +85,9 @@ export default function Navbar() {
             <img
               src="https://img.icons8.com/fluency/48/caduceus.png"
               alt="caduceus"
-              className="w-7 h-7 group-hover:rotate-12 transition-transform duration-300"
+              className="w-7 h-7 group-hover:rotate-12 transition-transform duration-300 relative z-10"
             />
-            <div className="absolute inset-0 bg-yellow-400 blur-md opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-yellow-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm"></div>
           </div>
           <div className="flex flex-col">
             <span className="font-ubuntu font-medium text-lg leading-tight text-white group-hover:text-yellow-400 transition-colors duration-300">
