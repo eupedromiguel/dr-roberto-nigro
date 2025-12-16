@@ -87,7 +87,7 @@ export default function Navbar() {
               alt="caduceus"
               className="w-7 h-7 group-hover:rotate-12 transition-transform duration-300 relative z-10"
             />
-            <div className="absolute inset-0 bg-yellow-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm"></div>
+            <div className="absolute inset-0"></div>
           </div>
           <div className="flex flex-col">
             <span className="font-ubuntu font-medium text-lg leading-tight text-white group-hover:text-yellow-400 transition-colors duration-300">
