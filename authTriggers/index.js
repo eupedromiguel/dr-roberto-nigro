@@ -7,7 +7,7 @@
 
 const functions = require("firebase-functions");
 const { admin, db } = require("./firebaseAdmin");
-const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail } = require("./notificacoes");
+const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail, sendConvenioRecusadoEmail } = require("./notificacoes");
 
 const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
@@ -417,6 +417,105 @@ exports.onAppointmentCancellation = functions.firestore
       return null;
     } catch (error) {
       console.error("Erro no gatilho onAppointmentCancellation:", error);
+      return null;
+    }
+  });
+
+
+// =========================================================
+// onConvenioRecusado
+// =========================================================
+// Dispara automaticamente quando notificacaoStatus muda para "recusado".
+// - Verifica mudança de status
+// - Busca dados do paciente (nome, email)
+// - Busca dados do médico (nome) em usuarios
+// - Busca especialidade do médico em medicos_publicos
+// - Envia e-mail para o paciente
+// =========================================================
+exports.onConvenioRecusado = functions.firestore
+  .document("appointments/{appointmentId}")
+  .onUpdate(async (change, context) => {
+    const appointmentId = context.params.appointmentId;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    try {
+      // Verificar se notificacaoStatus mudou para "recusado"
+      if (before.notificacaoStatus === "recusado" || after.notificacaoStatus !== "recusado") {
+        // Não é uma mudança para "recusado", ignorar
+        return null;
+      }
+
+      console.log(`Convênio recusado para appointment ${appointmentId}`);
+
+      // 1. Buscar dados do paciente
+      const pacienteId = after.pacienteId;
+      if (!pacienteId) {
+        console.error("Appointment sem pacienteId. Abortando envio de e-mail.");
+        return null;
+      }
+
+      const pacienteDoc = await db.collection("usuarios").doc(pacienteId).get();
+      if (!pacienteDoc.exists) {
+        console.error(`Paciente ${pacienteId} não encontrado no Firestore.`);
+        return null;
+      }
+
+      const pacienteData = pacienteDoc.data();
+      const pacienteInfo = {
+        nome: pacienteData.nome || "Paciente",
+      };
+
+      if (!pacienteData.email) {
+        console.warn(`Paciente ${pacienteId} não possui e-mail cadastrado. Abortando envio.`);
+        return null;
+      }
+
+      // 2. Buscar dados do médico
+      const medicoId = after.medicoId;
+      if (!medicoId) {
+        console.error("Appointment sem medicoId. Abortando envio de e-mail.");
+        return null;
+      }
+
+      const medicoDoc = await db.collection("usuarios").doc(medicoId).get();
+      if (!medicoDoc.exists) {
+        console.error(`Médico ${medicoId} não encontrado em 'usuarios'.`);
+        return null;
+      }
+
+      const medicoData = medicoDoc.data();
+      const medicoInfo = {
+        nome: medicoData.nome || "Médico",
+        especialidade: null,
+      };
+
+      // 3. Buscar especialidade do médico em medicos_publicos
+      try {
+        const medicoPublicoDoc = await db.collection("medicos_publicos").doc(medicoId).get();
+        if (medicoPublicoDoc.exists) {
+          const medicoPublicoData = medicoPublicoDoc.data();
+          medicoInfo.especialidade = medicoPublicoData.especialidade || null;
+        } else {
+          console.warn(`Médico ${medicoId} não encontrado em 'medicos_publicos'. Especialidade não será exibida.`);
+        }
+      } catch (err) {
+        console.warn(`Erro ao buscar especialidade do médico ${medicoId}:`, err);
+      }
+
+      // 4. Preparar dados do appointment com e-mail do paciente
+      const appointmentComEmail = {
+        ...after,
+        email: pacienteData.email,
+      };
+
+      // 5. Enviar e-mail de recusa de convênio
+      await sendConvenioRecusadoEmail(appointmentComEmail, pacienteInfo, medicoInfo);
+      console.log(`E-mail de recusa de convênio enviado com sucesso para ${pacienteData.email}`);
+
+      return null;
+    } catch (error) {
+      console.error("Erro no gatilho onConvenioRecusado:", error);
       return null;
     }
   });

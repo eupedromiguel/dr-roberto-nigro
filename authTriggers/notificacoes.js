@@ -636,3 +636,143 @@ exports.sendAppointmentCancellationEmail = async (appointmentData, pacienteInfo,
     }
   }
 };
+
+
+// ======================================================
+// Envio de e-mail de recusa de convênio
+// ======================================================
+exports.sendConvenioRecusadoEmail = async (appointmentData, pacienteInfo, medicoInfo) => {
+  if (!appointmentData.email) {
+    console.error("E-mail do paciente não fornecido.");
+    return;
+  }
+
+  // Formatar data e horário
+  const horarioCompleto = appointmentData.horario || "Data não informada";
+  const dataHoraParts = horarioCompleto.split(" ");
+  const data = dataHoraParts[0] || "Data não informada";
+  const horario = dataHoraParts[1] || "Horário não informado";
+
+  // Formatar data brasileira
+  let dataBrasileira = data;
+  try {
+    const [ano, mes, dia] = data.split("-");
+    dataBrasileira = `${dia}/${mes}/${ano}`;
+  } catch (err) {
+    console.warn("Erro ao formatar data:", err);
+  }
+
+  const tipoConsulta = appointmentData.tipoConsulta === "teleconsulta"
+    ? "Teleconsulta"
+    : "Presencial";
+
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Informação sobre sua Consulta</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f5f7fa; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; color:#333; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#1c2636,#222d3f); padding:24px; text-align:center; color:#fff; }
+    .header h1 { font-size:20px; margin:0; font-weight:600; }
+    .content { padding:32px 28px; }
+    .content p { font-size:15px; line-height:1.6; margin:12px 0; }
+    .info-box { background-color:#f9fafb; border-left:4px solid #ef4444; padding:16px; margin:20px 0; border-radius:4px; }
+    .info-box h3 { margin:0 0 12px; font-size:16px; color:#991b1b; }
+    .info-row { margin:8px 0; font-size:14px; }
+    .info-row strong { color:#1f2937; }
+    .suggestions { background-color:#fef3c7; border-left:4px solid #f59e0b; padding:16px; margin:20px 0; border-radius:4px; }
+    .suggestions h3 { margin:0 0 12px; font-size:16px; color:#92400e; }
+    .suggestions ul { margin:8px 0; padding-left:20px; }
+    .suggestions li { margin:6px 0; font-size:14px; color:#78350f; }
+    .cta { background-color:#f0fdf4; border-left:4px solid #10b981; padding:16px; margin:20px 0; border-radius:4px; text-align:center; }
+    .button { display:inline-block; margin:12px 0; padding:14px 28px; background-color:#030712; color:#fff !important; text-decoration:none; border-radius:8px; font-weight:600; font-size:15px; }
+    .footer { padding:20px 28px; text-align:center; font-size:13px; color:#777; background-color:#f9fafb; border-top:1px solid #e5e7eb; }
+    @media (max-width:600px){ .container{margin:20px;} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Clínica Dr. Roberto Nigro</h1>
+    </div>
+    <div class="content">
+      <p>Prezado(a) <strong>${pacienteInfo.nome}</strong>,</p>
+
+      <p>
+        Informamos que a consulta agendada para o dia <strong>${dataBrasileira}</strong>
+        às <strong>${horario}</strong> não pôde ser confirmada devido a incompatibilidade
+        com o convênio informado.
+      </p>
+
+      <div class="info-box">
+        <h3>Dados do Agendamento</h3>
+        <div class="info-row"><strong>Médico:</strong> ${medicoInfo.nome}${medicoInfo.especialidade ? ` - ${medicoInfo.especialidade}` : ''}</div>
+        <div class="info-row"><strong>Tipo:</strong> ${tipoConsulta}</div>
+        <div class="info-row"><strong>Convênio:</strong> ${appointmentData.convenio || "Não informado"}</div>
+        <div class="info-row"><strong>Categoria:</strong> ${appointmentData.categoria || "Não informada"}</div>
+        <div class="info-row"><strong>Carteirinha:</strong> ${appointmentData.carteirinha || "Não informada"}</div>
+      </div>
+
+      <div class="suggestions">
+        <h3>Possíveis Motivos</h3>
+        <ul>
+          <li>O convênio informado não é aceito pelo médico selecionado</li>
+          <li>Os dados da carteirinha podem estar incorretos</li>
+          <li>A categoria do convênio pode não corresponder ao plano cadastrado</li>
+        </ul>
+      </div>
+
+      <div class="suggestions">
+        <h3>O que você pode fazer?</h3>
+        <ul>
+          <li>Verifique se os dados da sua carteirinha foram inseridos corretamente</li>
+          <li>Confirme se o convênio informado é aceito pelo médico escolhido</li>
+          <li>Considere agendar uma consulta particular caso preferir</li>
+        </ul>
+      </div>
+
+      <div class="cta">
+        <p style="margin:0 0 16px; font-size:15px; color:#065f46;">
+          <strong>Agende novamente no nosso site</strong>
+        </p>
+        <a href="https://clinicadrrobertonigro.com" class="button">
+          Novo Agendamento
+        </a>
+      </div>
+
+      <p style="margin-top:24px; font-size:14px; color:#6b7280;">
+        Em caso de dúvidas, entre em contato conosco pelos canais abaixo.
+      </p>
+    </div>
+    <div class="footer">
+      <p style="margin:0 0 10px; color:#1f2937; font-size:15px; font-weight:600;">
+        Clínica Dr. Roberto Nigro
+      </p>
+      <p style="margin:0; line-height:1.6;">
+        Contato: (11) 96572-1206<br>
+        E-mail: admclinicarobertonigro@gmail.com<br>
+        Site: www.clinicadrrobertonigro.com.br
+      </p>
+      <p style="margin:15px 0 0; color:#9ca3af; font-size:12px;">
+        Esta é uma mensagem automática. Não é necessário respondê-la.<br/>
+        © 2025 Clínica Dr. Roberto Nigro — Todos os direitos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  await transporter.sendMail({
+    from: `Clínica Dr. Roberto Nigro <${EMAIL_USER}>`,
+    to: appointmentData.email,
+    subject: "Informação sobre sua Consulta - Convênio",
+    html,
+  });
+
+  console.log(`E-mail de recusa de convênio enviado para: ${appointmentData.email}`);
+};
