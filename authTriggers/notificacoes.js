@@ -776,3 +776,119 @@ exports.sendConvenioRecusadoEmail = async (appointmentData, pacienteInfo, medico
 
   console.log(`E-mail de recusa de convênio enviado para: ${appointmentData.email}`);
 };
+
+
+// ======================================================
+// Envio de e-mail de exclusão de conta
+// ======================================================
+exports.sendAccountDeletionEmail = async ({ email, nome }) => {
+  if (!email) {
+    console.error("E-mail do usuário não fornecido.");
+    return;
+  }
+
+  const dataExclusao = new Date().toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmação de Exclusão de Conta</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f5f7fa; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; color:#333; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#1c2636,#222d3f); padding:24px; text-align:center; color:#fff; }
+    .header h1 { font-size:20px; margin:0; font-weight:600; }
+    .content { padding:32px 28px; }
+    .content p { font-size:15px; line-height:1.6; margin:12px 0; }
+    .alert-box { background-color:#fef2f2; border-left:4px solid #ef4444; padding:16px; margin:20px 0; border-radius:4px; }
+    .alert-box h3 { margin:0 0 12px; font-size:16px; color:#991b1b; }
+    .alert-box p { margin:8px 0; font-size:14px; color:#7f1d1d; }
+    .info-box { background-color:#f9fafb; border-left:4px solid #6b7280; padding:16px; margin:20px 0; border-radius:4px; }
+    .info-box p { margin:8px 0; font-size:14px; color:#374151; }
+    .info-box strong { color:#1f2937; }
+    .footer { padding:20px 28px; text-align:center; font-size:13px; color:#777; background-color:#f9fafb; border-top:1px solid #e5e7eb; }
+    @media (max-width:600px){ .container{margin:20px;} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Clínica Dr. Roberto Nigro</h1>
+    </div>
+    <div class="content">
+      <p>Prezado(a) <strong>${nome}</strong>,</p>
+
+      <p>
+        Confirmamos que sua conta foi <strong>excluída com sucesso</strong> do sistema da
+        Clínica Dr. Roberto Nigro.
+      </p>
+
+      <div class="alert-box">
+        <h3>Conta Excluída</h3>
+        <p>
+          Todos os seus dados pessoais foram permanentemente removidos de nosso sistema.
+          Esta ação é irreversível.
+        </p>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Data e Hora da Exclusão:</strong> ${dataExclusao}</p>
+        <p><strong>E-mail da Conta:</strong> ${email}</p>
+      </div>
+
+      <p>
+        <strong>O que foi excluído:</strong>
+      </p>
+      <ul style="margin:8px 0 20px 20px; font-size:14px; line-height:1.8; color:#4b5563;">
+        <li>Seus dados pessoais (nome, CPF, telefone, data de nascimento)</li>
+        <li>Seu histórico de consultas</li>
+        <li>Suas credenciais de acesso</li>
+      </ul>
+
+      <p style="margin-top:24px; font-size:14px; color:#6b7280;">
+        Se você não solicitou esta exclusão ou acredita que foi um erro,
+        entre em contato conosco <strong>imediatamente</strong>.
+      </p>
+
+      <p style="margin-top:20px; font-size:14px; color:#6b7280;">
+        Agradecemos por ter utilizado nossos serviços.
+      </p>
+    </div>
+    <div class="footer">
+      <p style="margin:0 0 10px; color:#1f2937; font-size:15px; font-weight:600;">
+        Clínica Dr. Roberto Nigro
+      </p>
+      <p style="margin:0; line-height:1.6;">
+        Contato: (11) 96572-1206<br>
+        E-mail: admclinicarobertonigro@gmail.com<br>
+        Site: www.clinicadrrobertonigro.com.br
+      </p>
+      <p style="margin:15px 0 0; color:#9ca3af; font-size:12px;">
+        Esta é uma mensagem automática. Não é necessário respondê-la.<br/>
+        © 2025 Clínica Dr. Roberto Nigro — Todos os direitos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  await transporter.sendMail({
+    from: `Clínica Dr. Roberto Nigro <${EMAIL_USER}>`,
+    to: email,
+    subject: "Confirmação de Exclusão de Conta - Clínica Dr. Roberto Nigro",
+    html,
+  });
+
+  console.log(`E-mail de exclusão de conta enviado para: ${email}`);
+};

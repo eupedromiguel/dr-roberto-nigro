@@ -7,7 +7,7 @@
 
 const functions = require("firebase-functions");
 const { admin, db } = require("./firebaseAdmin");
-const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail, sendConvenioRecusadoEmail } = require("./notificacoes");
+const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail, sendConvenioRecusadoEmail, sendAccountDeletionEmail } = require("./notificacoes");
 
 const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
@@ -84,6 +84,8 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
 // onUserDelete
 // =========================================================
 // Dispara automaticamente ao deletar um usuário.
+// - Busca dados do usuário antes de deletar
+// - Envia e-mail de confirmação
 // - Remove documento Firestore
 // - Revoga tokens de login
 // =========================================================
@@ -91,9 +93,47 @@ exports.onUserDelete = functions.auth.user().onDelete(async (user) => {
   const uid = user.uid;
 
   try {
-    await db.collection("usuarios").doc(uid).delete();
-    console.log(`Documento 'usuarios/${uid}' removido.`);
+    // 1. BUSCAR DADOS DO USUÁRIO ANTES DE DELETAR
+    let userData = null;
+    try {
+      const userDoc = await db.collection("usuarios").doc(uid).get();
+      if (userDoc.exists) {
+        userData = userDoc.data();
+        console.log(`Dados do usuário ${uid} recuperados antes da exclusão.`);
+      }
+    } catch (err) {
+      console.warn(`Erro ao buscar dados do usuário ${uid}:`, err);
+    }
 
+    // 2. ENVIAR E-MAIL DE NOTIFICAÇÃO
+    try {
+      // Usar dados do Firestore se disponíveis, senão usar dados do Auth
+      const emailDestino = userData?.email || user.email;
+      const nomeUsuario = userData?.nome || user.displayName || "Usuário";
+
+      if (emailDestino) {
+        await sendAccountDeletionEmail({
+          email: emailDestino,
+          nome: nomeUsuario,
+        });
+        console.log(`E-mail de exclusão enviado para ${emailDestino}`);
+      } else {
+        console.warn(`Usuário ${uid} não possui e-mail. E-mail de exclusão não enviado.`);
+      }
+    } catch (emailErr) {
+      console.error(`Erro ao enviar e-mail de exclusão para ${uid}:`, emailErr);
+      // Não bloquear a exclusão se o e-mail falhar
+    }
+
+    // 3. DELETAR DOCUMENTO FIRESTORE (se ainda existir)
+    try {
+      await db.collection("usuarios").doc(uid).delete();
+      console.log(`Documento 'usuarios/${uid}' removido.`);
+    } catch (delErr) {
+      console.warn(`Erro ao deletar documento 'usuarios/${uid}':`, delErr);
+    }
+
+    // 4. REVOGAR TOKENS
     try {
       await admin.auth().revokeRefreshTokens(uid);
       console.log(`Tokens revogados para ${uid}`);
