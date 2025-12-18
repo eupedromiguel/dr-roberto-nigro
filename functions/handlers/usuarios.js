@@ -1,5 +1,11 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const { admin, db } = require("./firebaseAdmin");
+const nodemailer = require("nodemailer");
+
+// Definir secrets no escopo do módulo
+const emailUserSecret = defineSecret("EMAIL_USER");
+const emailPassSecret = defineSecret("EMAIL_PASS");
 
 
 // =====================================================
@@ -672,5 +678,201 @@ exports.trocarTelefone = onCall(async (request) => {
 });
 
 
+// =====================================================
+// Notificar alteração de senha
+// =====================================================
+exports.notificarAlteracaoSenha = onCall({
+  secrets: [emailUserSecret, emailPassSecret]
+}, async (request) => {
+  // 1. Validar autenticação
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado");
+  }
+
+  const uid = request.auth.uid;
+
+  console.log("Notificação de alteração de senha solicitada para:", uid);
+
+  try {
+    // 2. Buscar dados do usuário no Firestore
+    const userDoc = await db.collection("usuarios").doc(uid).get();
+
+    if (!userDoc.exists) {
+      throw new HttpsError("not-found", "Dados do usuário não encontrados");
+    }
+
+    const userData = userDoc.data();
+
+    // 3. Validar se o usuário tem e-mail
+    if (!userData.email) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Usuário não possui e-mail cadastrado"
+      );
+    }
+
+    // 4. Preparar dados para envio
+    const emailData = {
+      email: userData.email,
+      nome: userData.nome || "Usuário",
+      uid: uid
+    };
+
+    // 5. Configurar transporter com secrets
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUserSecret.value(),
+        pass: emailPassSecret.value()
+      },
+    });
+
+    const dataAtual = new Date().toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aviso de Segurança - Senha Alterada</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f5f7fa; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; color:#333; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#dc2626,#b91c1c); padding:24px; text-align:center; color:#fff; }
+    .header h1 { font-size:20px; margin:0; font-weight:600; }
+    .content { padding:32px 28px; }
+    .content p { font-size:15px; line-height:1.6; margin:12px 0; }
+    .alert-box { background-color:#fef2f2; border-left:4px solid #dc2626; padding:16px; margin:20px 0; border-radius:4px; }
+    .alert-box p { margin:8px 0; font-size:14px; color:#7f1d1d; }
+    .alert-box strong { color:#991b1b; }
+    .success-box { background-color:#f0fdf4; border-left:4px solid #10b981; padding:16px; margin:20px 0; border-radius:4px; }
+    .success-box p { margin:8px 0; font-size:14px; color:#065f46; }
+    .info-box { background-color:#f9fafb; border-left:4px solid #6b7280; padding:16px; margin:20px 0; border-radius:4px; }
+    .info-box p { margin:8px 0; font-size:14px; color:#374151; }
+    .info-box strong { color:#1f2937; }
+    .security-tips { background-color:#fef3c7; border-left:4px solid #f59e0b; padding:16px; margin:20px 0; border-radius:4px; }
+    .security-tips h3 { margin:0 0 12px; font-size:16px; color:#92400e; }
+    .security-tips ul { margin:8px 0; padding-left:20px; }
+    .security-tips li { margin:6px 0; font-size:14px; color:#78350f; }
+    .footer { padding:20px 28px; text-align:center; font-size:13px; color:#777; background-color:#f9fafb; border-top:1px solid #e5e7eb; }
+    @media (max-width:600px){ .container{margin:20px;} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Aviso de Segurança</h1>
+    </div>
+    <div class="content">
+      <p>Olá, <strong>${emailData.nome}</strong>!</p>
+
+      <div class="success-box">
+        <p style="margin:0; font-weight:600; font-size:16px;">
+          ✓ Sua senha foi alterada com sucesso
+        </p>
+      </div>
+
+      <p>
+        Confirmamos que a senha da sua conta na <strong>Clínica Dr. Roberto Nigro</strong>
+        foi alterada recentemente.
+      </p>
+
+      <div class="info-box">
+        <p style="margin:0; font-weight:600;">
+          Data e Hora da Alteração
+        </p>
+        <p style="margin:8px 0 0;">
+          ${dataAtual}
+        </p>
+      </div>
+
+      <div class="alert-box">
+        <p style="margin:0 0 8px; font-weight:600;">
+          Você não realizou esta alteração?
+        </p>
+        <p style="margin:0;">
+          Se você <strong>NÃO solicitou</strong> esta mudança de senha, sua conta pode estar comprometida.
+          Entre em contato conosco <strong>IMEDIATAMENTE</strong> pelos canais abaixo para proteger sua conta.
+        </p>
+      </div>
+
+      <div class="security-tips">
+        <h3>Dicas de Segurança</h3>
+        <ul>
+          <li>Nunca compartilhe sua senha com terceiros</li>
+          <li>Use senhas fortes com letras, números e caracteres especiais</li>
+          <li>Altere sua senha regularmente</li>
+          <li>Não utilize a mesma senha em diferentes serviços</li>
+          <li>Desconfie de e-mails solicitando suas credenciais</li>
+        </ul>
+      </div>
+
+      <p style="margin-top:24px; font-size:14px; color:#6b7280;">
+        Este é um e-mail automático de segurança. Se você realizou esta alteração,
+        pode ignorar esta mensagem.
+      </p>
+    </div>
+    <div class="footer">
+      <p style="margin:0 0 10px; color:#1f2937; font-size:15px; font-weight:600;">
+        Clínica Dr. Roberto Nigro
+      </p>
+      <p style="margin:0; line-height:1.6;">
+        <strong>URGENTE - Entre em contato:</strong><br>
+        Contato: (11) 96572-1206<br>
+        E-mail: admclinicarobertonigro@gmail.com<br>
+        Site: www.clinicadrrobertonigro.com.br
+      </p>
+      <p style="margin:15px 0 0; color:#9ca3af; font-size:12px;">
+        Esta é uma mensagem automática. Não é necessário respondê-la.<br/>
+        © ${new Date().getFullYear()} Clínica Dr. Roberto Nigro — Todos os direitos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    await transporter.sendMail({
+      from: `Clínica Dr. Roberto Nigro <${emailUserSecret.value()}>`,
+      to: emailData.email,
+      subject: "Aviso de Segurança - Senha Alterada — Clínica Dr. Roberto Nigro",
+      html,
+      headers: {
+        "Content-Type": "text/html; charset=UTF-8",
+      },
+    });
+
+    console.log(`E-mail de alteração de senha enviado para ${emailData.email}`);
+
+    // 6. Atualizar campo senhaAlteradaEm no Firestore (backup para trigger)
+    await db.collection("usuarios").doc(uid).set(
+      {
+        senhaAlteradaEm: admin.firestore.FieldValue.serverTimestamp(),
+        atualizadoEm: admin.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    return { sucesso: true };
+
+  } catch (error) {
+    console.error("Erro ao notificar alteração de senha:", error);
+
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    throw new HttpsError("internal", "Erro ao enviar notificação de alteração de senha");
+  }
+});
 
 

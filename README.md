@@ -7,6 +7,16 @@ Este repositório documenta a arquitetura do backend (Cloud Functions),
 integrações com o Firebase, regras de segurança, papéis de usuário e
 módulos principais da plataforma.\
 
+## Visão Geral
+
+Plataforma full-stack de agendamento médico com:
+- Autenticação segura (email, telefone, claims)
+- Cloud Functions v1 e v2
+- Regras rígidas de negócio e segurança
+- Auditoria completa de ações sensíveis
+- Front-end React com rotas protegidas por papel
+
+
 **Integração com Firebase** 
 
 - Cloud Functions (BackEnd)
@@ -15,7 +25,7 @@ módulos principais da plataforma.\
 - Storage (Armazenamento)
 - Authentication (email/senha + telefone)
 
-**Tecnologia usada**
+**Tecnologias Utilizadas**
 
 Ponto Importante: Atualmente, os triggers de autenticação do Firebase são suportados apenas por Cloud Functions de 1ª Geração. Deve-se usar a sintaxe e as bibliotecas da 1ª Geração para esses triggers específicos. 
 Embora o Firebase esteja avançando para a 2ª Geração, você pode ter funções de 1ª e 2ª Geração coexistindo no mesmo projeto. 
@@ -29,7 +39,7 @@ Embora o Firebase esteja avançando para a 2ª Geração, você pode ter funçõ
 
 * Cloud Functions v1 (AuthTriggers) us-central1
 
-- Node.js 18 
+- Node.js 20 
 - Firebase Functions v4.8.0
 - Firebase Admin v12.0.0  
 - Nodemailer 7.0.10 
@@ -48,7 +58,7 @@ firebase-app/
 │   │   ├── admin.js
 │   │   └── notificacoes.js
 │
-├── authTriggers/              # Funções v1 (Node 18)
+├── authTriggers/              # Funções v1 (Node 20)
 │   ├── index.js               # Entrypoint das v1
 │   ├── notificacoes.js        # Trigger onUserCreated
 │   ├── package.json
@@ -185,6 +195,14 @@ Módulo administrativo responsável por todas as ações restritas a administrad
 
 `relatorios.js`
 Sistema automático de relatórios mensais via **Firestore Trigger**.
+
+# Relatórios Administrativos
+
+Os relatórios registram:
+- Quem marcou a consulta como concluída (`doctor` ou `admin`)
+- Quem cancelou a consulta (`patient`, `doctor` ou `admin`)
+- Data de criação original da consulta
+- Indicação se a consulta foi concluída com retorno associado
 
 | Trigger                   | Tipo                     | Descrição                                                                 |
 |---------------------------|--------------------------|---------------------------------------------------------------------------|
@@ -391,11 +409,54 @@ Integridade garantida: campos sensíveis como role, pacienteId e medicoId não p
 
 Admin tem poderes amplos, mas sem permissão de exclusão. (Princípio do menor privilégio)
 
+# Segurança e Compliance
+
+**Exclusão de Conta e Auditoria**
+
+Quando um usuário exclui sua própria conta pela página **Meu Perfil**, o sistema:
+
+1. Remove o usuário do Firebase Authentication
+2. Remove o documento correspondente em `usuarios/{uid}`
+3. Gera automaticamente um log de auditoria em `/logs_delecoes`
+
+* Dados registrados no log
+Cada exclusão gera um documento contendo:
+
+- `email` do usuário
+- `uid` (ID do usuário)
+- `deletedAt` (data e hora da exclusão)
+- `ip` de origem da requisição
+
+* Objetivo
+- Auditoria e rastreabilidade de ações sensíveis
+- Análise de incidentes e segurança
+- Conformidade com boas práticas de proteção de dados
+
+# Segurança da Conta do Usuário
+
+## Alteração de E-mail
+- Ao solicitar mudança de e-mail:
+  - Um aviso de segurança é enviado para o e-mail antigo
+  - Um link de confirmação é enviado para o novo e-mail
+- A alteração só é efetivada após o clique no link de confirmação
+- O novo e-mail é automaticamente atualizado no Authentication e no Firestore
+
+## Alteração de Telefone
+- A troca de telefone exige confirmação por **código SMS**
+- O telefone só é atualizado após validação do código
+
+## Alertas de Segurança
+Qualquer alteração sensível dispara automaticamente:
+- E-mail informativo ao usuário
+- Dicas de segurança para proteger a conta
+
+
+
 -------------------------------------------------------------------------------------------------------------------------------
 
 # Front-End com React + Vite
 
-# Integração
+## Integração
 O front-end React consome as funções via **Callable Functions**:
 
 ```js
@@ -408,7 +469,7 @@ await criarUsuario({ nome, cpf, telefone });
 
 -------------------------------------------------------------------------------------------------------------------------------
 
-# Tecnologias Principais
+### Tecnologias Principais
 
 | Categoria                   | Tecnologias                               |
 |-----------------------------|-------------------------------------------|
@@ -427,26 +488,26 @@ Esses papéis são carregados no front via `AuthContext` e determinam o acesso �
 
 ---
 
-# Regras de Rotas e Proteção de Acesso
+## Regras de Rotas e Proteção de Acesso
 
 O app usa **React Router DOM** e componentes de proteção para garantir que cada papel veja apenas o permitido.
 
-# ProtectedRoute
+## ProtectedRoute
 Bloqueio de acesso a rotas privadas (Perfil/Marcar consulta/Minhas consultas) se o usuário não estiver autenticado.
 
-# AdminRoute
+## AdminRoute
 Permite acesso apenas a administradores.
 
-# DoctorRoute
+## DoctorRoute
 Restringe acesso apenas a médicos.
 
-# Design e Experiência
+## Design e Experiência
 - Layout responsivo (mobile-first, Tailwind)
 - Animações com Framer Motion
 - Skeleton loaders e modais dinâmicos
 - Ícones: Lucide Icons
 
-# Boas Práticas Implementadas
+## Boas Práticas Implementadas
 - Rotas protegidas por papel e autenticação.  
 - Layouts responsivos e reutilizáveis.    
 - Comunicação segura com Cloud Functions.  
@@ -454,8 +515,57 @@ Restringe acesso apenas a médicos.
 
 -------------------------------------------------------------------------------------------------------------------------------
 
+# Fluxo do Paciente
+
+## Criação de Conta
+- Cadastro exige verificação por **código SMS de 6 dígitos**
+- Após o cadastro, um **gatilho automático** envia e-mail de verificação
+- O acesso à página de agendamento só é liberado após a confirmação do e-mail
+
+### Regras de Negócio da Clínica
+
+- Apenas **1 consulta por horário**
+- Apenas **1 consulta por médico no mesmo horário**
+- Um retorno só pode ser agendado após a consulta original ser concluída
+- Caso exista um retorno em andamento, novos agendamentos são bloqueados
+
+### Agendamento de Consultas
+
+O paciente pode:
+- Visualizar horários disponíveis por médico (dia e hora)
+- Ver informações do médico:
+  - Nome
+  - Foto
+  - Especialidade
+- Agendar consultas
+- Acompanhar o status das consultas
+- Cancelar consultas já agendadas
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+# Login
+
+## Recuperação de Senha
+- A funcionalidade **"Esqueci minha senha"** envia corretamente o e-mail de redefinição
+- O link é gerado pelo Firebase Authentication
+- Processo seguro e compatível com boas práticas
+
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+## Decisões de Arquitetura
+
+- Uso de Cloud Functions v1 apenas onde necessário (Auth Triggers)
+- Cloud Functions v2 para melhor escalabilidade e performance
+- Regras críticas de negócio implementadas no backend
+- Front-end atua apenas como consumidor das regras
+
 # Licença e Créditos
-Desenvolvido por **Pedro Miguel**, como parte do projeto acadêmico e operacional da  
-**Clínica Dr. Roberto Nigro** — sistema de agendamento e gestão médica full-stack.  
+
+Desenvolvido por **Pedro Miguel**
+
+> Este projeto foi desenvolvido com foco acadêmico e operacional,
+> aplicando práticas utilizadas em sistemas reais de produção.
+
 
 © 2025 Clínica Dr. Roberto Nigro. Todos os direitos reservados.

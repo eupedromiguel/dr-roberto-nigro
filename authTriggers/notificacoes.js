@@ -892,3 +892,233 @@ exports.sendAccountDeletionEmail = async ({ email, nome }) => {
 
   console.log(`E-mail de exclusão de conta enviado para: ${email}`);
 };
+
+
+// ======================================================
+// Envio de e-mail de atualização de perfil
+// ======================================================
+exports.sendEmailUserPerfilUpdate = async (userData, camposAlterados, before, after) => {
+  if (!userData.email) {
+    console.error("E-mail do usuário não fornecido.");
+    return;
+  }
+
+  // Mapeamento de labels dos campos
+  const LABELS_CAMPOS = {
+    cpf: "CPF",
+    dataNascimento: "Data de Nascimento",
+    email: "E-mail",
+    nome: "Nome Completo",
+    sexoBiologico: "Sexo Biológico",
+    telefone: "Telefone"
+  };
+
+  // Formatar data de nascimento para exibição
+  const formatarDataNascimento = (data) => {
+    if (!data) return "Não informado";
+    try {
+      const [ano, mes, dia] = data.split("-");
+      return `${dia}/${mes}/${ano}`;
+    } catch (err) {
+      return data;
+    }
+  };
+
+  // Formatar CPF parcialmente (mascarar parte do CPF)
+  const formatarCPF = (cpf) => {
+    if (!cpf) return "Não informado";
+    // Mascara: XXX.XXX.XXX-XX -> ***.***.XXX-XX
+    if (cpf.length === 11) {
+      return `***.***. ${cpf.substring(6, 9)}-${cpf.substring(9)}`;
+    }
+    return cpf;
+  };
+
+  // Formatar telefone
+  const formatarTelefone = (telefone) => {
+    if (!telefone) return "Não informado";
+    // Se tiver 11 dígitos: (XX) XXXXX-XXXX
+    if (telefone.length === 11) {
+      return `(${telefone.substring(0, 2)}) ${telefone.substring(2, 7)}-${telefone.substring(7)}`;
+    }
+    return telefone;
+  };
+
+  // Formatar valor do campo de acordo com o tipo
+  const formatarValor = (campo, valor) => {
+    if (!valor) return "Não informado";
+
+    switch (campo) {
+      case "dataNascimento":
+        return formatarDataNascimento(valor);
+      case "cpf":
+        return formatarCPF(valor);
+      case "telefone":
+        return formatarTelefone(valor);
+      case "sexoBiologico":
+        return valor === "M" ? "Masculino" : valor === "F" ? "Feminino" : valor;
+      default:
+        return valor;
+    }
+  };
+
+  // Construir lista de alterações
+  const alteracoesHTML = camposAlterados.map(campo => {
+    const label = LABELS_CAMPOS[campo];
+    const valorAnterior = formatarValor(campo, before[campo]);
+    const valorNovo = formatarValor(campo, after[campo]);
+
+    return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
+          <strong style="color: #1f2937;">${label}</strong>
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">
+          ${valorAnterior}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #059669; font-weight: 600;">
+          ${valorNovo}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  const dataAtual = new Date().toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alteração no seu Cadastro</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f5f7fa; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; color:#333; }
+    .container { max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden; }
+    .header { background:linear-gradient(135deg,#1c2636,#222d3f); padding:24px; text-align:center; color:#fff; }
+    .header h1 { font-size:20px; margin:0; font-weight:600; }
+    .content { padding:32px 28px; }
+    .content p { font-size:15px; line-height:1.6; margin:12px 0; }
+    .info-box { background-color:#f0fdf4; border-left:4px solid #10b981; padding:16px; margin:20px 0; border-radius:4px; }
+    .info-box p { margin:8px 0; font-size:14px; color:#065f46; }
+    .table-container { margin: 25px 0; overflow-x: auto; }
+    .changes-table { width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 8px; overflow: hidden; }
+    .changes-table th { background-color: #1f2937; color: #ffffff; padding: 12px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .changes-table td { font-size: 14px; }
+    .alert-box { background-color:#fef3c7; border-left:4px solid #f59e0b; padding:16px; margin:20px 0; border-radius:4px; }
+    .alert-box p { margin:8px 0; font-size:14px; color:#92400e; }
+    .footer { padding:20px 28px; text-align:center; font-size:13px; color:#777; background-color:#f9fafb; border-top:1px solid #e5e7eb; }
+    @media (max-width:600px){ .container{margin:20px;} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Alteração no seu Cadastro</h1>
+    </div>
+    <div class="content">
+      <p>Olá, <strong>${userData.nome}</strong>!</p>
+
+      <p>
+        Identificamos que algumas informações do seu cadastro foram alteradas recentemente
+        em nosso sistema.
+      </p>
+
+      <div class="info-box">
+        <p style="margin:0; font-weight:600;">
+          Data e Hora da Alteração
+        </p>
+        <p style="margin:8px 0 0;">
+          ${dataAtual}
+        </p>
+      </div>
+
+      <p style="margin:25px 0 15px; font-weight:600; color:#1f2937;">
+        Campos Alterados:
+      </p>
+
+      <div class="table-container">
+        <table class="changes-table">
+          <thead>
+            <tr>
+              <th>Campo</th>
+              <th>Valor Anterior</th>
+              <th>Novo Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${alteracoesHTML}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert-box">
+        <p style="margin:0 0 8px; font-weight:600;">
+          Esta alteração foi realizada por você?
+        </p>
+        <p style="margin:0;">
+          Se você não reconhece estas alterações, recomendamos que entre em contato
+          conosco <strong>imediatamente</strong> para garantir a segurança da sua conta.
+        </p>
+      </div>
+
+      <p style="margin-top:24px; font-size:14px; color:#6b7280;">
+        Este é um e-mail automático de segurança para mantê-lo(a) informado(a)
+        sobre mudanças importantes em seu cadastro.
+      </p>
+    </div>
+    <div class="footer">
+      <p style="margin:0 0 10px; color:#1f2937; font-size:15px; font-weight:600;">
+        Clínica Dr. Roberto Nigro
+      </p>
+      <p style="margin:0; line-height:1.6;">
+        Contato: (11) 96572-1206<br>
+        E-mail: admclinicarobertonigro@gmail.com<br>
+        Site: www.clinicadrrobertonigro.com.br
+      </p>
+      <p style="margin:15px 0 0; color:#9ca3af; font-size:12px;">
+        Esta é uma mensagem automática. Não é necessário respondê-la.<br/>
+        © ${new Date().getFullYear()} Clínica Dr. Roberto Nigro — Todos os direitos reservados.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  // Envio com retry (máximo 3 tentativas)
+  const maxTentativas = 3;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      await transporter.sendMail({
+        from: `Clínica Dr. Roberto Nigro <${EMAIL_USER}>`,
+        to: userData.email,
+        subject: "Alteração no seu Cadastro — Clínica Dr. Roberto Nigro",
+        html,
+        headers: {
+          "Content-Type": "text/html; charset=UTF-8",
+        },
+      });
+
+      console.log(`E-mail de atualização de perfil enviado para ${userData.email} (tentativa ${tentativa})`);
+      return; // Sucesso, sair da função
+    } catch (error) {
+      console.error(`Tentativa ${tentativa} de envio de e-mail falhou:`, error);
+
+      if (tentativa === maxTentativas) {
+        console.error("Falha ao enviar e-mail após todas as tentativas:", error);
+        throw error;
+      }
+
+      // Aguardar antes de tentar novamente (backoff exponencial)
+      await new Promise((resolve) => setTimeout(resolve, 1000 * tentativa));
+    }
+  }
+};

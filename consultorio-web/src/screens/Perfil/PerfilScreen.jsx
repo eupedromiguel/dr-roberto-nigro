@@ -720,6 +720,16 @@ async function handleEnviarCodigoTelefone() {
       // Atualizar senha no Firebase Auth
       await updatePassword(currentUser, novaSenha);
 
+      // Notificar usuário por e-mail
+      try {
+        const notificar = httpsCallable(functions, "usuarios-notificarAlteracaoSenha");
+        await notificar({});
+        console.log("E-mail de notificação enviado com sucesso");
+      } catch (emailError) {
+        console.warn("Falha ao enviar e-mail de notificação:", emailError);
+        // Não bloqueia o sucesso da operação se o e-mail falhar
+      }
+
       // Sucesso
       setModo("senhaSucesso");
       setSenha("");

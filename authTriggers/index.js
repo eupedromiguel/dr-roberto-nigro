@@ -7,7 +7,7 @@
 
 const functions = require("firebase-functions");
 const { admin, db } = require("./firebaseAdmin");
-const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail, sendConvenioRecusadoEmail, sendAccountDeletionEmail } = require("./notificacoes");
+const { sendVerificationEmail, sendAppointmentConfirmationEmail, sendRetornoConfirmationEmail, sendAppointmentCancellationEmail, sendConvenioRecusadoEmail, sendAccountDeletionEmail, sendEmailUserPerfilUpdate } = require("./notificacoes");
 
 const timestamp = admin.firestore.FieldValue.serverTimestamp();
 
@@ -556,6 +556,70 @@ exports.onConvenioRecusado = functions.firestore
       return null;
     } catch (error) {
       console.error("Erro no gatilho onConvenioRecusado:", error);
+      return null;
+    }
+  });
+
+
+// =========================================================
+// onUserPerfilUpdate
+// =========================================================
+// Dispara automaticamente quando um perfil de usuário é atualizado.
+// - Detecta mudanças em campos específicos: cpf, dataNascimento, email, nome, sexoBiologico, telefone
+// - Envia e-mail informando o usuário sobre as alterações
+// - NÃO envia e-mail para alteração de senha (isso é feito pela Cloud Function)
+// =========================================================
+exports.onUserPerfilUpdate = functions.firestore
+  .document("usuarios/{uid}")
+  .onUpdate(async (change, context) => {
+    const uid = context.params.uid;
+    const before = change.before.data();
+    const after = change.after.data();
+
+    try {
+      console.log(`Perfil do usuário ${uid} foi atualizado.`);
+
+      // Campos monitorados
+      const camposMonitorados = ["cpf", "dataNascimento", "email", "nome", "sexoBiologico", "telefone"];
+
+      // Detectar quais campos foram alterados
+      const camposAlterados = camposMonitorados.filter(campo => {
+        const valorAnterior = before[campo];
+        const valorNovo = after[campo];
+
+        // Considera alteração se os valores são diferentes e pelo menos um deles existe
+        return valorAnterior !== valorNovo && (valorAnterior || valorNovo);
+      });
+
+      // Se nenhum campo monitorado foi alterado, não fazer nada
+      if (camposAlterados.length === 0) {
+        console.log("Nenhum campo monitorado foi alterado. Nenhum e-mail será enviado.");
+        return null;
+      }
+
+      console.log(`Campos alterados: ${camposAlterados.join(", ")}`);
+
+      // Verificar se o usuário tem e-mail
+      const emailUsuario = after.email || before.email;
+      if (!emailUsuario) {
+        console.warn(`Usuário ${uid} não possui e-mail cadastrado. E-mail não será enviado.`);
+        return null;
+      }
+
+      // Preparar dados do usuário
+      const userData = {
+        email: emailUsuario,
+        nome: after.nome || before.nome || "Usuário",
+        uid: uid,
+      };
+
+      // Enviar e-mail de atualização de perfil
+      await sendEmailUserPerfilUpdate(userData, camposAlterados, before, after);
+      console.log(`E-mail de atualização de perfil enviado com sucesso para ${emailUsuario}`);
+
+      return null;
+    } catch (error) {
+      console.error("Erro no gatilho onUserPerfilUpdate:", error);
       return null;
     }
   });
