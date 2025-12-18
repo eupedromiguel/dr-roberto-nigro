@@ -1,4 +1,4 @@
-# README -- Clínica Dr. Roberto Nigro
+# Clínica Dr. Roberto Nigro
 
 Sistema completo de agendamento médico, desenvolvido com **Firebase**,
 **React** e **Vite**.
