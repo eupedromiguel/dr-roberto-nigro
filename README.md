@@ -13,7 +13,7 @@ Plataforma full-stack de agendamento médico com:
 - Autenticação segura (email, telefone, claims)
 - Cloud Functions v1 e v2
 - Regras rígidas de negócio e segurança
-- Auditoria completa de ações sensíveis
+- Auditoria de ações sensíveis
 - Front-end React com rotas protegidas por papel
 
 
