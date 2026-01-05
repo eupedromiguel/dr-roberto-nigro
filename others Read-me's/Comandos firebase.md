@@ -1,7 +1,7 @@
 # Comandos do firebase no terminal
 
 **Deployar**
-(Leia ./Comandos Vite.md para fazer o build do front antes de deployar)
+(Leia /Comandos_Dev_Build_Deploy.md para fazer o build do front antes de deployar)
 
 - Envio para produção:
 
